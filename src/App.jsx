@@ -336,8 +336,21 @@ export default function App() {
     { name: 'Huevos docena', checked: false }
   ]);
 
-  const [customItems, setCustomItems] = useState([]);
+  const [customItems, setCustomItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('smartcart_items') || sessionStorage.getItem('smartcart_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [newItem, setNewItem] = useState('');
+
+  useEffect(() => {
+    try {
+      const data = JSON.stringify(customItems);
+      localStorage.setItem('smartcart_items', data);
+      sessionStorage.setItem('smartcart_items', data);
+    } catch {}
+  }, [customItems]);
 
   const [results, setResults] = useState(null);
   const [scanStatus, setScanStatus] = useState({ phase: 'idle', stores: [], currentStoreScraping: '', itemIndex: 0 });
@@ -451,26 +464,35 @@ export default function App() {
           });
         }
       } else {
-        details = { cat: 'genérico', isBeverage: false, strictBrand: true, unit: 'kg' };
+        const beverageKeywords = ['cola','pepsi','coca','fanta','sprite','agua','zumo','jugo','cerveza','vino','refresco','bebida','leche','batido','té','cafe','café','energy','monster','aquarius','nestea','lipton','mahou','estrella','heineken','shandy','tonica','tónica','bitter','soda','zero','light','max'];
+        const isBeverage = beverageKeywords.some(kw => lowerItem.includes(kw));
+        const unit = isBeverage ? 'L' : 'kg';
+        details = { cat: 'genérico', isBeverage, strictBrand: true, unit };
         setScanStatus(prev => ({ ...prev, currentStoreScraping: 'Buscando formatos...' }));
         const realApiData = await ApiService.fetchRealProductData(item);
-        const basePricePerKg = 2.0 + Math.random() * 8.0;
+        const basePricePerUnit = 1.5 + Math.random() * 6.0;
+        const formats = isBeverage ? [
+          { qty: 0.33, label: 'Lata 33cl' },
+          { qty: 0.5, label: 'Botella 500ml' },
+          { qty: 1.0, label: 'Botella 1L' },
+          { qty: 1.5, label: 'Botella 1.5L' },
+          { qty: 2.0, label: 'Botella 2L' }
+        ] : [
+          { qty: 0.25, label: 'Formato 250g' },
+          { qty: 0.5, label: 'Formato 500g' },
+          { qty: 1.0, label: 'Familiar 1Kg' }
+        ];
         for (const store of localStores) {
           setScanStatus(prev => ({ ...prev, currentStoreScraping: store.nombre }));
           await new Promise(resolve => setTimeout(resolve, 300));
-          const formats = [
-            { qty: 0.25, label: 'Formato 250g' },
-            { qty: 0.5, label: 'Formato 500g' },
-            { qty: 1.0, label: 'Familiar 1Kg' }
-          ];
           for (const format of formats) {
             const storeModifier = 1 + (Math.random() * 0.3 - 0.15);
-            const sizeDiscount = format.qty >= 1 ? 0.85 : (format.qty <= 0.25 ? 1.20 : 1.0);
-            const finalPrice = basePricePerKg * format.qty * storeModifier * sizeDiscount * regionalPriceModifier;
+            const sizeDiscount = format.qty >= 1.5 ? 0.80 : format.qty >= 1 ? 0.88 : format.qty <= 0.33 ? 1.25 : 1.0;
+            const finalPrice = basePricePerUnit * format.qty * storeModifier * sizeDiscount * regionalPriceModifier;
             options.push({
               ...store, specificBrand: realApiData.brand,
               isBrand: true, format: format.label, price: finalPrice, unitPrice: finalPrice / format.qty,
-              calculationUnit: "kg", containerType: ""
+              calculationUnit: unit, containerType: ""
             });
           }
         }
