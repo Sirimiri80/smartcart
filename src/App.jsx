@@ -5,7 +5,7 @@ import {
   Loader2, Globe, Target, List, Camera,
   Scale, Package, ArrowRight, Zap, Star, Clock,
   ShoppingBasket, TrendingDown, Bell, Heart, X, ImageOff,
-  ShoppingCart // Añadido el carrito de la compra
+  ShoppingCart 
 } from 'lucide-react';
 
 // ==========================================
@@ -153,16 +153,20 @@ const REAL_PRICES_DB = {
 const Storage = {
   get: (key, fallback = null) => {
     try {
-      const v = localStorage.getItem(key) ?? sessionStorage.getItem(key);
+      const local = localStorage.getItem(key);
+      const session = sessionStorage.getItem(key);
+      const v = local || session;
       return v ? JSON.parse(v) : fallback;
-    } catch { return fallback; }
+    } catch (e) { 
+      return fallback; 
+    }
   },
   set: (key, value) => {
     try {
       const s = JSON.stringify(value);
       localStorage.setItem(key, s);
       sessionStorage.setItem(key, s);
-    } catch {}
+    } catch (e) {}
   }
 };
 
@@ -186,14 +190,14 @@ const fetchPhotoOFF = async (query, cacheRef) => {
     const imgUrl = data.products?.find(p => p.image_front_url)?.image_front_url || null;
     cacheRef.current[key] = imgUrl;
     return imgUrl;
-  } catch {
+  } catch (e) {
     cacheRef.current[key] = null;
     return null;
   }
 };
 
 // ==========================================
-// 4. SERVICIO GEMINI
+// 4. SERVICIO IA UNIVERSAL Y CON REINTENTOS
 // ==========================================
 const ApiService = {
   analyzeImageWithAI: async (base64String, mimeType, apiKey) => {
@@ -206,14 +210,61 @@ const ApiService = {
         ]
       }]
     };
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
-    );
-    const data = await res.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (text) return text;
-    throw new Error(data.error?.message || "Sin respuesta de Gemini");
+
+    // Tiempos de espera para reintentos en cascada (1s, 2s, 4s, 8s, 16s)
+    const delays = [1000, 2000, 4000, 8000, 16000];
+    let lastError = null;
+
+    for (let i = 0; i < delays.length; i++) {
+      try {
+        // Seleccionamos inteligentemente el modelo a usar basado en dónde se está ejecutando
+        let modelToUse = apiKey ? "gemini-2.5-flash" : "gemini-2.5-flash-preview-09-2025";
+        
+        let res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+        );
+        
+        let data = await res.json();
+
+        // Si el usuario está en StackBlitz y el modelo 2.5 flash falla por no estar habilitado, usamos 1.5 flash de respaldo
+        if (!res.ok && data.error?.message?.toLowerCase().includes("not found")) {
+            modelToUse = "gemini-1.5-flash";
+            res = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKey}`,
+              { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+            );
+            data = await res.json();
+        }
+
+        if (!res.ok) {
+          if (data.error?.message?.includes("unregistered callers") || data.error?.message?.includes("API_KEY_INVALID")) {
+            throw new Error("Falta configurar tu API Key gratuita en el código.");
+          }
+          throw new Error(data.error?.message || "Error en la conexión con la IA.");
+        }
+
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) return text;
+
+        throw new Error("No se pudo extraer el texto de la imagen.");
+      } catch (error) {
+        lastError = error;
+        
+        // Si el error es de la API Key, no sirve de nada reintentar. Cortamos y avisamos al usuario.
+        if (error.message.includes("API Key") || error.message.includes("Falta configurar")) {
+          throw error;
+        }
+        
+        // Esperamos en silencio antes de volver a intentarlo automáticamente
+        if (i < delays.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, delays[i]));
+        }
+      }
+    }
+    
+    // Si ha fallado las 5 veces seguidas, devolvemos el error amigable
+    throw new Error("Error en los servidores de Google. Por favor, inténtalo de nuevo en unos segundos.");
   }
 };
 
@@ -389,7 +440,10 @@ export default function App() {
   const [resultsTab, setResultsTab] = useState('comparativa');
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [imageError, setImageError] = useState('');
+  
+  // Pon aquí tu clave de Google API para usarlo en StackBlitz o tu PC
   const apiKey = "AIzaSyBO0KR9duDYFti1xJzHazohVVW_KVigveo";
+  
   const fileInputRef = useRef(null);
   const photoCache = useRef({});
 
@@ -413,7 +467,6 @@ export default function App() {
   const [scanProgress, setScanProgress] = useState(0);
   const listEndRef = useRef(null);
 
-  // Efecto para la pantalla de carga (Splash Screen)
   useEffect(() => {
     if (!showSplash) return;
     let progress = 0;
@@ -472,10 +525,18 @@ export default function App() {
           const b64 = reader.result.split(',')[1];
           const text = await ApiService.analyzeImageWithAI(b64,file.type,apiKey);
           const clean = text.replace(/[^a-zA-Z0-9 áéíóúÁÉÍÓÚñÑ]/g,'').trim();
-          if(clean&&clean.length>2) setCustomItems(prev=>[...prev,clean]); else setImageError("No pude identificar.");
-        } catch(err){ setImageError(err.message||"Error."); } finally{ setIsAnalyzingImage(false); setTimeout(()=>setImageError(''),4000); }
+          if(clean&&clean.length>2) setCustomItems(prev=>[...prev,clean]); else setImageError("No pude identificar el producto.");
+        } catch(err){ 
+          setImageError(err.message||"Error desconocido."); 
+        } finally{ 
+          setIsAnalyzingImage(false); 
+          setTimeout(()=>setImageError(''),5000); 
+        }
       };
-    } catch{ setImageError("Error lectura."); setIsAnalyzingImage(false); }
+    } catch { 
+      setImageError("Error de lectura local."); 
+      setIsAnalyzingImage(false); 
+    }
     if(fileInputRef.current) fileInputRef.current.value=null;
   };
 
@@ -605,9 +666,6 @@ export default function App() {
     setView('results');
   };
 
-  // ==========================================
-  // RENDERS
-  // ==========================================
   const STYLES = `
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,700;9..40,900&display=swap');
     @keyframes fadeSlideIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -618,9 +676,9 @@ export default function App() {
     .glow-box{animation:glow 2s ease-in-out infinite}
   `;
 
-  // Nueva PANTALLA DE CARGA (Splash Screen)
   const renderSplash = () => (
     <div className="flex flex-col h-full bg-slate-900 items-center justify-center relative overflow-hidden" style={{ fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
+      <style>{STYLES}</style>
       <div className="absolute inset-0 opacity-10" style={{ backgroundImage:'linear-gradient(rgba(16,185,129,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(16,185,129,.5) 1px,transparent 1px)', backgroundSize:'32px 32px' }}/>
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full opacity-20 blur-3xl" style={{ background:'#10b981' }}/>
 
@@ -655,7 +713,6 @@ export default function App() {
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center space-x-2.5">
               <div className="w-9 h-9 rounded-2xl flex items-center justify-center shadow-lg" style={{ background:'linear-gradient(135deg,#10b981,#059669)' }}>
-                {/* CAMBIO VISUAL: Carrito de la compra en lugar de estrella */}
                 <ShoppingCart size={18} className="text-white" strokeWidth={2.5}/>
               </div>
               <div>
