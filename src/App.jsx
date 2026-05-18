@@ -442,7 +442,7 @@ export default function App() {
   const [imageError, setImageError] = useState('');
   
   // Pon aquí tu clave de Google API para usarlo en StackBlitz o tu PC
-  const apiKey = "AIzaSyBO0KR9duDYFti1xJzHazohVVW_KVigveo";
+  const apiKey = "AIzaSyC0C6xniGC1Q8_hVX5_xICQvryXO7llHT4";
   
   const fileInputRef = useRef(null);
   const photoCache = useRef({});
