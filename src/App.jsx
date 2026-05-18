@@ -185,6 +185,7 @@ const ApiService = {
     if (text) return text;
     throw new Error(data.error?.message || "Sin respuesta de Gemini");
   }
+}; 
 
 // ==========================================
 // 4. UTILIDADES
