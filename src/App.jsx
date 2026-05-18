@@ -389,7 +389,7 @@ export default function App() {
   const [resultsTab, setResultsTab] = useState('comparativa');
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [imageError, setImageError] = useState('');
-  const apiKey = "";
+  const apiKey = "AIzaSyBO0KR9duDYFti1xJzHazohVVW_KVigveo";
   const fileInputRef = useRef(null);
   const photoCache = useRef({});
 
