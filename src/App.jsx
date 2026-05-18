@@ -21,7 +21,24 @@ const SUPERMERCADOS = [
   { id: 'alcampo', nombre: 'Alcampo', color: 'bg-rose-100 text-rose-800', border: 'border-rose-300', headerBg: 'bg-[#e3001b]', headerText: 'text-white', accent: '#e3001b' }
 ];
 
-// Queries optimizadas para Open Food Facts (en español, más resultados)
+// Fotos estáticas cacheadas para productos conocidos (Open Food Facts stable URLs)
+// Se usan como primer intento antes de buscar en la API
+const STATIC_PHOTOS = {
+  'leche entera':      'https://images.openfoodfacts.org/images/products/841/500/600/1011/front_es.3.400.jpg',
+  'cola cao':          'https://images.openfoodfacts.org/images/products/841/010/009/0888/front_es.26.400.jpg',
+  'pepsi max lima':    'https://images.openfoodfacts.org/images/products/544/900/000/3718/front_es.26.400.jpg',
+  'huevos docena':     'https://images.openfoodfacts.org/images/products/841/000/016/6073/front_es.7.400.jpg',
+  'aceite oliva':      'https://images.openfoodfacts.org/images/products/841/500/300/0049/front_es.15.400.jpg',
+  'pan de molde':      'https://images.openfoodfacts.org/images/products/841/010/000/9003/front_es.17.400.jpg',
+  'arroz':             'https://images.openfoodfacts.org/images/products/841/500/600/7040/front_es.9.400.jpg',
+  'pasta macarrones':  'https://images.openfoodfacts.org/images/products/841/010/009/0086/front_es.14.400.jpg',
+  'yogur natural':     'https://images.openfoodfacts.org/images/products/765/450/105/0004/front_es.35.400.jpg',
+  'mantequilla':       'https://images.openfoodfacts.org/images/products/350/184/010/0116/front_fr.27.400.jpg',
+  'tomate frito':      'https://images.openfoodfacts.org/images/products/841/010/000/8778/front_es.14.400.jpg',
+  'pollo entero':      'https://images.openfoodfacts.org/images/products/841/500/600/3075/front_es.3.400.jpg',
+  'detergente ropa':   'https://images.openfoodfacts.org/images/products/841/010/004/2949/front_es.17.400.jpg',
+};
+
 const REAL_PRICES_DB = {
   'leche entera': { cat: 'leche', isBeverage: true, strictBrand: null, unit: 'L', offQuery: 'leche entera', options: [
     { storeId: 'aldi',      brand: 'Milsani (M. Blanca)',    isBrand: false, price: 0.88, qty: 1,   format: 'Brik 1L' },
@@ -33,7 +50,7 @@ const REAL_PRICES_DB = {
     { storeId: 'carrefour', brand: 'Pascual (1ª Marca)',     isBrand: true,  price: 1.34, qty: 1,   format: 'Brik 1L' },
     { storeId: 'bm',        brand: 'Pascual (1ª Marca)',     isBrand: true,  price: 7.95, qty: 6,   format: 'Pack 6x1L' }
   ]},
-  'cola cao': { cat: 'cacao', isBeverage: false, strictBrand: 'Cola Cao', unit: 'kg', offQuery: 'cola cao', options: [
+  'cola cao': { cat: 'cacao', isBeverage: false, strictBrand: 'Cola Cao', unit: 'kg', offQuery: 'cola cao cacao', options: [
     { storeId: 'alcampo',   brand: 'Cola Cao Original', isBrand: true, price: 3.45,  qty: 0.38, format: 'Bote 380g' },
     { storeId: 'mercadona', brand: 'Cola Cao Original', isBrand: true, price: 5.95,  qty: 0.76, format: 'Bote 760g' },
     { storeId: 'dia',       brand: 'Cola Cao Original', isBrand: true, price: 5.99,  qty: 0.76, format: 'Bote 760g' },
@@ -49,7 +66,7 @@ const REAL_PRICES_DB = {
     { storeId: 'aldi',      brand: 'Pepsi Max Lima', isBrand: true, price: 1.95, qty: 2.0,  format: 'Botella 2L' },
     { storeId: 'eroski',    brand: 'Pepsi Max Lima', isBrand: true, price: 3.80, qty: 4.0,  format: 'Pack 2x2L' }
   ]},
-  'huevos docena': { cat: 'huevo', isBeverage: false, strictBrand: null, unit: 'ud', offQuery: 'huevos camperos docena', options: [
+  'huevos docena': { cat: 'huevo', isBeverage: false, strictBrand: null, unit: 'ud', offQuery: 'huevos docena', options: [
     { storeId: 'aldi',      brand: 'El Mercado (M. Blanca)',  isBrand: false, price: 1.35, qty: 6,  format: 'Media M' },
     { storeId: 'alcampo',   brand: 'Auchan (M. Blanca)',      isBrand: false, price: 2.19, qty: 12, format: 'Docena L' },
     { storeId: 'lidl',      brand: 'Milbona (M. Blanca)',     isBrand: false, price: 2.25, qty: 12, format: 'Docena L' },
@@ -65,7 +82,7 @@ const REAL_PRICES_DB = {
     { storeId: 'alcampo',   brand: 'Auchan',     isBrand: false, price: 7.20, qty: 1.5,  format: 'Botella 1.5L' },
     { storeId: 'aldi',      brand: 'Primadonna', isBrand: false, price: 3.69, qty: 0.75, format: 'Botella 750ml' }
   ]},
-  'pan de molde': { cat: 'pan', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'pan de molde bimbo', options: [
+  'pan de molde': { cat: 'pan', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'pan molde sandwich', options: [
     { storeId: 'mercadona', brand: 'Hacendado',    isBrand: false, price: 1.05, qty: 0.45, format: 'Bolsa 450g' },
     { storeId: 'lidl',      brand: 'Lieken Urkorn',isBrand: false, price: 1.25, qty: 0.5,  format: 'Bolsa 500g' },
     { storeId: 'dia',       brand: 'Dia',          isBrand: false, price: 0.99, qty: 0.45, format: 'Bolsa 450g' },
@@ -81,7 +98,7 @@ const REAL_PRICES_DB = {
     { storeId: 'alcampo',   brand: 'Auchan',     isBrand: false, price: 0.92, qty: 1, format: 'Bolsa 1Kg' },
     { storeId: 'aldi',      brand: 'Grandessa',  isBrand: false, price: 0.85, qty: 1, format: 'Bolsa 1Kg' }
   ]},
-  'pasta macarrones': { cat: 'pasta', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'macarrones pasta gallo', options: [
+  'pasta macarrones': { cat: 'pasta', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'macarrones pasta', options: [
     { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 0.75, qty: 0.5, format: 'Bolsa 500g' },
     { storeId: 'lidl',      brand: 'Combino',   isBrand: false, price: 0.69, qty: 0.5, format: 'Bolsa 500g' },
     { storeId: 'dia',       brand: 'Dia',       isBrand: false, price: 0.72, qty: 0.5, format: 'Bolsa 500g' },
@@ -89,7 +106,7 @@ const REAL_PRICES_DB = {
     { storeId: 'alcampo',   brand: 'Auchan',    isBrand: false, price: 0.70, qty: 0.5, format: 'Bolsa 500g' },
     { storeId: 'aldi',      brand: 'Combino',   isBrand: false, price: 0.65, qty: 0.5, format: 'Bolsa 500g' }
   ]},
-  'yogur natural': { cat: 'yogur', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'yogur natural danone', options: [
+  'yogur natural': { cat: 'yogur', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'yogur natural', options: [
     { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 0.79, qty: 0.5, format: 'Pack 4x125g' },
     { storeId: 'lidl',      brand: 'Milbona',   isBrand: false, price: 0.69, qty: 0.5, format: 'Pack 4x125g' },
     { storeId: 'dia',       brand: 'Dia',       isBrand: false, price: 0.75, qty: 0.5, format: 'Pack 4x125g' },
@@ -97,7 +114,7 @@ const REAL_PRICES_DB = {
     { storeId: 'alcampo',   brand: 'Auchan',    isBrand: false, price: 0.72, qty: 0.5, format: 'Pack 4x125g' },
     { storeId: 'aldi',      brand: 'Milsani',   isBrand: false, price: 0.65, qty: 0.5, format: 'Pack 4x125g' }
   ]},
-  'mantequilla': { cat: 'mantequilla', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'mantequilla president', options: [
+  'mantequilla': { cat: 'mantequilla', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'mantequilla butter', options: [
     { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 1.45, qty: 0.25, format: 'Tarrina 250g' },
     { storeId: 'lidl',      brand: 'Milbona',   isBrand: false, price: 1.35, qty: 0.25, format: 'Tarrina 250g' },
     { storeId: 'dia',       brand: 'Dia',       isBrand: false, price: 1.40, qty: 0.25, format: 'Tarrina 250g' },
@@ -113,7 +130,7 @@ const REAL_PRICES_DB = {
     { storeId: 'alcampo',   brand: 'Auchan',    isBrand: false, price: 0.80, qty: 0.4, format: 'Bote 400g' },
     { storeId: 'aldi',      brand: 'Grandessa', isBrand: false, price: 0.75, qty: 0.4, format: 'Bote 400g' }
   ]},
-  'pollo entero': { cat: 'carne', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'pollo entero campofrio', options: [
+  'pollo entero': { cat: 'carne', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'pollo entero fresco', options: [
     { storeId: 'mercadona', brand: 'Campofrío',         isBrand: true,  price: 4.50, qty: 1.5, format: 'Pollo 1.5Kg' },
     { storeId: 'lidl',      brand: 'Lidl Fresh',        isBrand: false, price: 3.99, qty: 1.5, format: 'Pollo 1.5Kg' },
     { storeId: 'dia',       brand: 'Dia Fresh',         isBrand: false, price: 4.20, qty: 1.5, format: 'Pollo 1.5Kg' },
@@ -121,13 +138,13 @@ const REAL_PRICES_DB = {
     { storeId: 'alcampo',   brand: 'Auchan Fresh',      isBrand: false, price: 4.10, qty: 1.5, format: 'Pollo 1.5Kg' },
     { storeId: 'aldi',      brand: 'Aldi Fresh',        isBrand: false, price: 3.89, qty: 1.5, format: 'Pollo 1.5Kg' }
   ]},
-  'detergente ropa': { cat: 'limpieza', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'detergente lavadora ariel', options: [
-    { storeId: 'mercadona', brand: 'Bosque Verde', isBrand: false, price: 3.99, qty: 2.7, format: 'Caja 27 dosis' },
-    { storeId: 'lidl',      brand: 'W5',           isBrand: false, price: 3.49, qty: 2.4, format: 'Caja 24 dosis' },
-    { storeId: 'dia',       brand: 'Dia',          isBrand: false, price: 3.75, qty: 2.5, format: 'Caja 25 dosis' },
-    { storeId: 'carrefour', brand: 'Ariel',        isBrand: true,  price: 9.99, qty: 3.6, format: 'Caja 36 dosis' },
-    { storeId: 'alcampo',   brand: 'Auchan',       isBrand: false, price: 3.89, qty: 2.7, format: 'Caja 27 dosis' },
-    { storeId: 'aldi',      brand: 'Tandil',       isBrand: false, price: 3.29, qty: 2.4, format: 'Caja 24 dosis' }
+  'detergente ropa': { cat: 'limpieza', isBeverage: false, strictBrand: null, unit: 'dosis', offQuery: 'detergente lavadora polvo', options: [
+    { storeId: 'mercadona', brand: 'Bosque Verde', isBrand: false, price: 3.99, qty: 27, format: 'Caja 27 dosis' },
+    { storeId: 'lidl',      brand: 'W5',           isBrand: false, price: 3.49, qty: 24, format: 'Caja 24 dosis' },
+    { storeId: 'dia',       brand: 'Dia',          isBrand: false, price: 3.75, qty: 25, format: 'Caja 25 dosis' },
+    { storeId: 'carrefour', brand: 'Ariel',        isBrand: true,  price: 9.99, qty: 36, format: 'Caja 36 dosis' },
+    { storeId: 'alcampo',   brand: 'Auchan',       isBrand: false, price: 3.89, qty: 27, format: 'Caja 27 dosis' },
+    { storeId: 'aldi',      brand: 'Tandil',       isBrand: false, price: 3.29, qty: 24, format: 'Caja 24 dosis' }
   ]}
 };
 
@@ -151,93 +168,38 @@ const Storage = {
 };
 
 // ==========================================
-// 3. SERVICIO API MERCADONA (para precios)
+// 3. SERVICIO OPEN FOOD FACTS — sólo para fotos, CORS abierto
+//    Timeout corto, sin proxy, sin reintentos múltiples
 // ==========================================
-const MercadonaService = {
-  WAREHOUSES: ['ssa1', 'bil1', 'mad1', 'vlc1'],
-  PROXIES: [
-    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-  ],
-  buildUrl: (query, wh) =>
-    `https://tienda.mercadona.es/api/products/?term=${encodeURIComponent(query)}&lang=es&wh=${wh}`,
-  parseProduct: (product) => {
-    if (!product) return null;
-    const pi = product.price_instructions || {};
-    const price = parseFloat(pi.unit_price || pi.bulk_price || 0);
-    const photo = product.photos?.[0];
-    return {
-      id: product.id,
-      name: product.display_name || '',
-      price,
-      brand: product.brand || null,
-      photoUrl: photo?.zoom || photo?.regular || photo?.thumbnail || null,
-      format: pi.size_format || null,
-      unitSize: parseFloat(pi.unit_size || 1),
-    };
-  },
-  searchProduct: async (query) => {
-    for (const makeProxyUrl of MercadonaService.PROXIES) {
-      for (const wh of MercadonaService.WAREHOUSES) {
-        try {
-          const targetUrl = MercadonaService.buildUrl(query, wh);
-          const proxyUrl = makeProxyUrl(targetUrl);
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 5000);
-          const res = await fetch(proxyUrl, { signal: controller.signal });
-          clearTimeout(timer);
-          if (!res.ok) continue;
-          const text = await res.text();
-          const data = JSON.parse(text);
-          const items = Array.isArray(data) ? data : (data.results || []);
-          if (items.length > 0) {
-            const parsed = MercadonaService.parseProduct(items[0]);
-            if (parsed && parsed.price > 0) return parsed;
-          }
-        } catch { continue; }
-      }
-    }
+const fetchPhotoOFF = async (query, cacheRef) => {
+  const key = query.toLowerCase().trim();
+  // 1. Foto estática hardcodeada (instantáneo)
+  if (STATIC_PHOTOS[key] !== undefined) {
+    cacheRef.current[key] = STATIC_PHOTOS[key];
+    return STATIC_PHOTOS[key];
+  }
+  // 2. Caché en memoria
+  if (cacheRef.current[key] !== undefined) return cacheRef.current[key];
+
+  // 3. Consulta OFF con timeout de 4s
+  try {
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=3&fields=image_front_url&lc=es&cc=es`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    const data = await res.json();
+    const imgUrl = data.products?.find(p => p.image_front_url)?.image_front_url || null;
+    cacheRef.current[key] = imgUrl;
+    return imgUrl;
+  } catch {
+    cacheRef.current[key] = null;
     return null;
   }
 };
 
 // ==========================================
-// 4. SERVICIO OPEN FOOD FACTS (fotos + marca)
-// ==========================================
-const OpenFoodFactsService = {
-  // Devuelve { brand, imageUrl } — tiene CORS abierto, funciona siempre desde browser
-  searchProduct: async (query) => {
-    const result = { brand: null, imageUrl: null };
-    try {
-      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=5&fields=brands,image_front_url,image_url,product_name&lc=es&cc=es`;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 6000);
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timer);
-      const data = await res.json();
-      // Buscamos el primer producto con imagen válida
-      const products = data.products || [];
-      for (const p of products) {
-        const imgUrl = p.image_front_url || p.image_url || null;
-        if (imgUrl && imgUrl.startsWith('http')) {
-          if (p.brands && !result.brand) result.brand = p.brands.split(',')[0].trim();
-          result.imageUrl = imgUrl;
-          break;
-        }
-      }
-      // Marca aunque no haya imagen
-      if (!result.brand && products[0]?.brands) {
-        result.brand = products[0].brands.split(',')[0].trim();
-      }
-    } catch {}
-    if (!result.brand) result.brand = '1ª Marca';
-    return result;
-  }
-};
-
-// ==========================================
-// 5. SERVICIOS IA (Gemini)
+// 4. SERVICIO GEMINI (análisis imagen cámara)
 // ==========================================
 const ApiService = {
   analyzeImageWithAI: async (base64String, mimeType, apiKey) => {
@@ -263,7 +225,7 @@ const ApiService = {
 };
 
 // ==========================================
-// 6. UTILIDADES
+// 5. UTILIDADES
 // ==========================================
 const Utils = {
   getStoreLocation: (storeId, cp) => {
@@ -282,6 +244,8 @@ const Utils = {
     let hashDist = 0; const strDist = storeId + cp; for (let i = 0; i < strDist.length; i++) { hashDist = strDist.charCodeAt(i) + ((hashDist << 5) - hashDist); }
     return { address: exactAddress, distance: (((Math.abs(hashDist) % 28) + 2) / 10).toFixed(1) };
   },
+  // Hash determinista para evitar Math.random() (resultados inconsistentes entre renders)
+  hashNum: (str) => { let h = 0; for (let i = 0; i < str.length; i++) { h = str.charCodeAt(i) + ((h << 5) - h); } return Math.abs(h); },
   calculateGeoSeed: (cp) => { let h = 0; for (let i = 0; i < cp.length; i++) { h = cp.charCodeAt(i) + ((h << 5) - h); } return Math.abs(h); },
   splitFormat: (f) => { const p = f.split(' '); return p.length > 1 ? { type: p[0], amount: p.slice(1).join(' ') } : { type: 'Formato', amount: f }; },
   isBeverageItem: (name) => {
@@ -294,7 +258,7 @@ const Utils = {
 };
 
 // ==========================================
-// 7. COMPONENTES VISUALES
+// 6. COMPONENTES VISUALES
 // ==========================================
 const StoreLogo = memo(({ store, className = "" }) => {
   const logos = {
@@ -325,30 +289,19 @@ const RankPill = ({ rank }) => {
   return <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${styles[rank]||'bg-slate-100 text-slate-500'}`}>{rank+1}</span>;
 };
 
-// Imagen de producto con estados carga/error
 const ProductImage = memo(({ photoUrl, name, size = 'md' }) => {
-  const [state, setState] = useState('loading'); // loading | ok | error
-
+  const [state, setState] = useState('loading');
   if (!photoUrl) return null;
-
-  const dims = size === 'lg'
-    ? 'w-20 h-20'
-    : size === 'sm'
-      ? 'w-8 h-8'
-      : 'w-16 h-16';
-
+  const dims = size === 'lg' ? 'w-20 h-20' : size === 'sm' ? 'w-8 h-8' : 'w-16 h-16';
   return (
     <div className={`${dims} rounded-2xl flex-shrink-0 overflow-hidden flex items-center justify-center border border-white/20 bg-white/10`}>
       {state === 'error' ? (
         <ImageOff size={size === 'sm' ? 12 : 20} className="text-white/30"/>
       ) : (
         <>
-          {state === 'loading' && (
-            <div className={`${dims} animate-pulse rounded-2xl bg-white/10`}/>
-          )}
+          {state === 'loading' && <div className={`${dims} animate-pulse rounded-2xl bg-white/10`}/>}
           <img
-            src={photoUrl}
-            alt={name}
+            src={photoUrl} alt={name}
             className={`w-full h-full object-contain p-1.5 transition-opacity duration-300 ${state === 'ok' ? 'opacity-100' : 'opacity-0 absolute'}`}
             onLoad={() => setState('ok')}
             onError={() => setState('error')}
@@ -365,17 +318,14 @@ const ProductCard = memo(({ item, index, onAddToBasket }) => {
   const maxUnitPrice = Math.max(...item.rankedOptions.map(o => o.unitPrice));
   const minUnitPrice = topOption.unitPrice;
   const savings = maxUnitPrice - minUnitPrice;
-  const photoUrl = item.photoUrl || null;
 
   return (
     <div className="bg-white rounded-3xl overflow-hidden mb-3 border border-slate-100" style={{ animation: `fadeSlideIn 0.4s ease ${index*0.08}s both` }}>
-      {/* Cabecera coloreada con foto */}
       <div className="relative overflow-hidden" style={{ background: topOption.accent||'#1a1a2e' }}>
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage:'repeating-linear-gradient(45deg,rgba(255,255,255,.1) 0,rgba(255,255,255,.1) 1px,transparent 0,transparent 50%)', backgroundSize:'8px 8px' }}/>
         <div className="relative p-4">
           <div className="flex items-start space-x-3">
-            {/* Foto real del producto */}
-            {photoUrl && <ProductImage photoUrl={photoUrl} name={item.itemName} size="md"/>}
+            {item.photoUrl && <ProductImage photoUrl={item.photoUrl} name={item.itemName} size="md"/>}
             <div className="flex-1 min-w-0">
               <h3 className="font-black text-white text-lg leading-tight capitalize">{item.itemName}</h3>
               <p className="text-white/70 text-xs font-medium mt-0.5 truncate">{topOption.specificBrand}</p>
@@ -397,8 +347,6 @@ const ProductCard = memo(({ item, index, onAddToBasket }) => {
           </div>
         </div>
       </div>
-
-      {/* Comparativa de tiendas */}
       <div className="p-4">
         <div className="space-y-2 mb-3">
           {item.rankedOptions.map((opt, idx) => {
@@ -437,7 +385,7 @@ const ProductCard = memo(({ item, index, onAddToBasket }) => {
 });
 
 // ==========================================
-// 8. APP PRINCIPAL
+// 7. APP PRINCIPAL
 // ==========================================
 export default function App() {
   const [view, setView] = useState('home');
@@ -448,9 +396,8 @@ export default function App() {
   const [imageError, setImageError] = useState('');
   const apiKey = "AIzaSyBO0KR9duDYFti1xJzHazohVVW_KVigveo";
   const fileInputRef = useRef(null);
-  // Caché para no repetir llamadas API en la misma sesión
+  // Caché foto (persiste toda la sesión)
   const photoCache = useRef({});
-  const mercadonaCache = useRef({});
 
   const [predefinedItems, setPredefinedItems] = useState([
     { name:'Leche entera',checked:false },{ name:'Cola Cao',checked:false },{ name:'Pepsi Max Lima',checked:false },
@@ -468,7 +415,7 @@ export default function App() {
   const [priceAlerts, setPriceAlerts] = useState(() => Storage.get('smartcart_alerts',{}));
   const [alertNotifications, setAlertNotifications] = useState([]);
   const [results, setResults] = useState(null);
-  const [scanStatus, setScanStatus] = useState({ phase:'idle', stores:[], currentStoreScraping:'', itemIndex:0 });
+  const [scanStatus, setScanStatus] = useState({ phase:'idle', stores:[], currentStoreScraping:'', itemIndex:0, doneCount:0 });
   const [scanProgress, setScanProgress] = useState(0);
   const listEndRef = useRef(null);
 
@@ -495,7 +442,6 @@ export default function App() {
   const totalExpensive = useMemo(()=>{ if(!results) return 0; return results.items.reduce((a,item)=>a+Math.max(...item.rankedOptions.map(o=>o.price)),0); },[results]);
 
   const toggleFavorite = (name) => setFavorites(prev=>prev.includes(name)?prev.filter(f=>f!==name):[...prev,name]);
-
   const addToBasket = (itemName, option) => {
     setBasket(prev=>{
       const exists = prev.find(b=>b.name===itemName);
@@ -503,7 +449,6 @@ export default function App() {
       return [...prev,{name:itemName,...option}];
     });
   };
-
   const handleTogglePredefined = (index) => setPredefinedItems(prev=>prev.map((item,i)=>i===index?{...item,checked:!item.checked}:item));
 
   const handleCameraUpload = async (e) => {
@@ -523,77 +468,41 @@ export default function App() {
     if(fileInputRef.current) fileInputRef.current.value=null;
   };
 
-  // Obtiene foto del producto: primero Mercadona, luego Open Food Facts
-  const fetchProductPhoto = async (query, offQuery) => {
-    const cacheKey = query.toLowerCase();
-    if (photoCache.current[cacheKey] !== undefined) return photoCache.current[cacheKey];
-
-    // 1. Intenta Mercadona (para su foto de alta calidad)
-    let mercadonaData = mercadonaCache.current[cacheKey];
-    if (mercadonaData === undefined) {
-      mercadonaData = await MercadonaService.searchProduct(offQuery || query);
-      mercadonaCache.current[cacheKey] = mercadonaData || false;
-    }
-    if (mercadonaData && mercadonaData.photoUrl) {
-      photoCache.current[cacheKey] = mercadonaData.photoUrl;
-      return mercadonaData.photoUrl;
-    }
-
-    // 2. Fallback: Open Food Facts (CORS abierto, muy fiable)
-    setScanStatus(prev=>({...prev, currentStoreScraping:'Buscando foto...'}));
-    const offData = await OpenFoodFactsService.searchProduct(offQuery || query);
-    const url = offData.imageUrl || null;
-    photoCache.current[cacheKey] = url;
-    return url;
-  };
-
+  // ==========================================
+  // SCANNING — NUEVA VERSIÓN RÁPIDA
+  // Precios: 100% síncrono desde BD local (cero peticiones de red)
+  // Fotos: Promise.allSettled en paralelo (una petición por producto)
+  // ==========================================
   const startScanning = async () => {
     if(itemsToScan.length===0) return;
     setView('scanning'); setResultsTab('comparativa'); setScanProgress(0);
-    setScanStatus({ phase:'locating', stores:[], currentStoreScraping:'', itemIndex:0 });
-    await new Promise(r=>setTimeout(r,2000));
+    setScanStatus({ phase:'locating', stores:[], currentStoreScraping:'', itemIndex:0, doneCount:0 });
+
+    // Paso 1 — animación geolocalización (reducida a 800ms)
+    await new Promise(r=>setTimeout(r,800));
+
     const geoSeed = Utils.calculateGeoSeed(userAddress);
     const regMod = 1+(((geoSeed%100)-50)/1000);
-    const localStores = SUPERMERCADOS;
-    setScanStatus({ phase:'connecting', stores:localStores, currentStoreScraping:'', itemIndex:0 });
-    await new Promise(r=>setTimeout(r,1500));
-    const finalResults = [];
-    const newAlerts = {...priceAlerts};
-    const notifications = [];
 
-    for(let i=0;i<itemsToScan.length;i++){
-      setScanStatus(prev=>({...prev,phase:'scraping',itemIndex:i}));
-      setScanProgress(Math.round((i/itemsToScan.length)*85));
-      const item = itemsToScan[i];
+    setScanStatus({ phase:'connecting', stores:SUPERMERCADOS, currentStoreScraping:'', itemIndex:0, doneCount:0 });
+    await new Promise(r=>setTimeout(r,500));
+
+    setScanStatus(prev=>({ ...prev, phase:'scraping' }));
+    setScanProgress(15);
+
+    // Paso 2 — Calcular todos los precios de forma SÍNCRONA (BD local, sin red)
+    const priceData = itemsToScan.map((item) => {
       const lowerItem = item.toLowerCase();
-      let options=[],details={};
-      let productPhotoUrl = null;
+      let options = [], details = {}, offQuery = item;
 
-      if(REAL_PRICES_DB[lowerItem]){
+      if (REAL_PRICES_DB[lowerItem]) {
         const rd = REAL_PRICES_DB[lowerItem];
-        details={ cat:rd.cat, isBeverage:rd.isBeverage, strictBrand:rd.strictBrand, unit:rd.unit };
+        offQuery = rd.offQuery;
+        details = { cat:rd.cat, isBeverage:rd.isBeverage, strictBrand:rd.strictBrand, unit:rd.unit };
 
-        // Busca foto (Mercadona primero → Open Food Facts fallback)
-        setScanStatus(prev=>({...prev, currentStoreScraping:'Buscando foto del producto...'}));
-        productPhotoUrl = await fetchProductPhoto(lowerItem, rd.offQuery);
-
-        // Precio de Mercadona API (si disponible, actualiza el precio de la BD)
-        const mercadonaData = mercadonaCache.current[lowerItem];
-        const hasMercadonaPrice = mercadonaData && mercadonaData.price > 0;
-
-        for(const opt of rd.options){
-          const storeDef = SUPERMERCADOS.find(s=>s.id===opt.storeId)||SUPERMERCADOS[0];
-          setScanStatus(prev=>({...prev,currentStoreScraping:storeDef.nombre}));
-          await new Promise(r=>setTimeout(r,120));
-
-          let finalPrice = opt.price * regMod;
-
-          // Si es Mercadona y tenemos precio real de la API, usarlo
-          if (opt.storeId === 'mercadona' && hasMercadonaPrice) {
-            const ratio = mercadonaData.price / opt.price;
-            if (ratio > 0.3 && ratio < 3) finalPrice = mercadonaData.price;
-          }
-
+        for (const opt of rd.options) {
+          const storeDef = SUPERMERCADOS.find(s=>s.id===opt.storeId) || SUPERMERCADOS[0];
+          const finalPrice = opt.price * regMod;
           options.push({
             ...storeDef,
             specificBrand: opt.brand,
@@ -606,44 +515,28 @@ export default function App() {
           });
         }
       } else {
-        // Producto personalizado: precios estimados + foto de Open Food Facts
+        // Producto personalizado: precios estimados deterministas (sin Math.random)
         const isBev = Utils.isBeverageItem(item);
-        const unit = isBev?'L':'kg';
-        details={ cat:'genérico', isBeverage:isBev, strictBrand:true, unit };
+        const unit = isBev ? 'L' : 'kg';
+        details = { cat:'genérico', isBeverage:isBev, strictBrand:true, unit };
 
-        setScanStatus(prev=>({...prev, currentStoreScraping:'Buscando foto del producto...'}));
-        // Para personalizados buscamos directamente en OFF (CORS seguro)
-        const offData = await OpenFoodFactsService.searchProduct(item);
-        productPhotoUrl = offData.imageUrl || null;
-        const brandName = offData.brand || '1ª Marca';
-
-        // También intentamos Mercadona para precio base
-        let mercadonaData = mercadonaCache.current[lowerItem];
-        if (mercadonaData === undefined) {
-          mercadonaData = await MercadonaService.searchProduct(item);
-          mercadonaCache.current[lowerItem] = mercadonaData || false;
-          if (mercadonaData?.photoUrl && !productPhotoUrl) productPhotoUrl = mercadonaData.photoUrl;
-        }
-
-        const basePPU = (mercadonaData && mercadonaData.price > 0) ? mercadonaData.price : (1.5+Math.random()*6.0);
+        const itemHash = Utils.hashNum(item);
+        const basePPU = 1.5 + (itemHash % 600) / 100;
         const formats = isBev
-          ?[{qty:0.33,label:'Lata 33cl'},{qty:0.5,label:'Botella 500ml'},{qty:1.0,label:'Botella 1L'},{qty:1.5,label:'Botella 1.5L'},{qty:2.0,label:'Botella 2L'}]
-          :[{qty:0.25,label:'Formato 250g'},{qty:0.5,label:'Formato 500g'},{qty:1.0,label:'Familiar 1Kg'}];
+          ? [{qty:0.33,label:'Lata 33cl'},{qty:1.0,label:'Botella 1L'},{qty:2.0,label:'Botella 2L'}]
+          : [{qty:0.5,label:'Formato 500g'},{qty:1.0,label:'Familiar 1Kg'}];
 
-        for(const store of localStores){
-          setScanStatus(prev=>({...prev,currentStoreScraping:store.nombre}));
-          await new Promise(r=>setTimeout(r,180));
-          for(const fmt of formats){
-            const sm=1+(Math.random()*0.3-0.15);
-            const sd=fmt.qty>=1.5?0.80:fmt.qty>=1?0.88:fmt.qty<=0.33?1.25:1.0;
-            const fp=basePPU*fmt.qty*sm*sd*regMod;
+        for (const store of SUPERMERCADOS) {
+          for (const fmt of formats) {
+            const sm = 0.82 + ((Utils.hashNum(store.id + item + fmt.qty) % 36) / 100);
+            const fp = basePPU * fmt.qty * sm * regMod;
             options.push({
               ...store,
-              specificBrand: brandName,
+              specificBrand: '1ª Marca',
               isBrand: true,
               format: fmt.label,
               price: fp,
-              unitPrice: fp/fmt.qty,
+              unitPrice: fp / fmt.qty,
               calculationUnit: unit,
               containerType: '',
             });
@@ -651,29 +544,66 @@ export default function App() {
         }
       }
 
-      options.sort((a,b)=>a.unitPrice-b.unitPrice);
-      const unique=[]; const seen=new Set();
-      for(const opt of options){ const k=`${opt.id}-${opt.isBrand}-${opt.format}`; if(!seen.has(k)){ seen.add(k); unique.push(opt); } if(unique.length>=6) break; }
-
-      // Alertas precio
-      const bestPrice = unique[0].price;
-      if(newAlerts[lowerItem]!==undefined && bestPrice<newAlerts[lowerItem]*0.95){
-        notifications.push({ name:item, oldPrice:newAlerts[lowerItem], newPrice:bestPrice });
+      // Ordenar y deduplicar
+      options.sort((a,b) => a.unitPrice - b.unitPrice);
+      const unique = []; const seen = new Set();
+      for (const opt of options) {
+        const k = `${opt.id}-${opt.isBrand}-${opt.format}`;
+        if (!seen.has(k)) { seen.add(k); unique.push(opt); }
+        if (unique.length >= 6) break;
       }
-      newAlerts[lowerItem] = bestPrice;
 
-      finalResults.push({ itemName:item, details, rankedOptions:unique, photoUrl:productPhotoUrl });
-    }
+      return { itemName:item, details, rankedOptions:unique, offQuery, photoUrl:null };
+    });
+
+    setScanProgress(40);
+    setScanStatus(prev => ({ ...prev, currentStoreScraping: 'Descargando fotos en paralelo...' }));
+
+    // Paso 3 — Buscar TODAS las fotos en PARALELO (una petición OFF por producto)
+    let doneCount = 0;
+    const photoPromises = priceData.map(async (pd, i) => {
+      const url = await fetchPhotoOFF(pd.offQuery || pd.itemName, photoCache);
+      doneCount++;
+      // Actualizar progreso conforme llegan las fotos
+      const pct = 40 + Math.round((doneCount / priceData.length) * 50);
+      setScanProgress(pct);
+      setScanStatus(prev => ({ ...prev, doneCount, currentStoreScraping: `${doneCount}/${priceData.length} fotos` }));
+      return { index: i, url };
+    });
+
+    const photoResults = await Promise.allSettled(photoPromises);
+
+    // Fusionar fotos con los resultados de precios
+    photoResults.forEach(result => {
+      if (result.status === 'fulfilled' && result.value.url) {
+        priceData[result.value.index].photoUrl = result.value.url;
+      }
+    });
+
+    // Paso 4 — Alertas de precio
+    const newAlerts = { ...priceAlerts };
+    const notifications = [];
+    priceData.forEach(item => {
+      const k = item.itemName.toLowerCase();
+      const bestPrice = item.rankedOptions[0].price;
+      if (newAlerts[k] !== undefined && bestPrice < newAlerts[k] * 0.95) {
+        notifications.push({ name:item.itemName, oldPrice:newAlerts[k], newPrice:bestPrice });
+      }
+      newAlerts[k] = bestPrice;
+    });
 
     setPriceAlerts(newAlerts);
-    if(notifications.length>0) setAlertNotifications(notifications);
-    setHistory(prev=>[{ items:itemsToScan, date:new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) },...prev].slice(0,10));
+    if (notifications.length > 0) setAlertNotifications(notifications);
+    setHistory(prev => [{
+      items: itemsToScan,
+      date: new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+    }, ...prev].slice(0,10));
 
-    setScanStatus(prev=>({...prev,phase:'calculating'}));
+    setScanStatus(prev => ({ ...prev, phase:'calculating' }));
     setScanProgress(95);
-    await new Promise(r=>setTimeout(r,1500));
+    await new Promise(r=>setTimeout(r,500));
     setScanProgress(100);
-    setResults({ items:finalResults });
+    setResults({ items: priceData });
     setView('results');
   };
 
@@ -946,87 +876,114 @@ export default function App() {
     </div>
   );
 
-  const renderScanning = () => (
-    <div className="flex flex-col h-full relative overflow-hidden" style={{ background:'#0a0f1e', fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
-      <style>{STYLES}</style>
-      <div className="absolute inset-0 opacity-5" style={{ backgroundImage:'linear-gradient(rgba(16,185,129,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(16,185,129,.5) 1px,transparent 1px)', backgroundSize:'32px 32px' }}/>
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full opacity-10 blur-3xl" style={{ background:'#10b981' }}/>
-      <div className="relative z-10 flex flex-col h-full p-6 pt-14">
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center space-x-2 px-4 py-2 rounded-full border glow-box" style={{ background:'rgba(16,185,129,.1)', borderColor:'rgba(16,185,129,.3)' }}>
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 scan-pulse"/>
-            <span className="text-[11px] font-black uppercase tracking-widest text-emerald-400">
-              {scanStatus.phase==='locating'?'Geolocalizando':scanStatus.phase==='connecting'?'Conectando':scanStatus.phase==='scraping'?'Extrayendo precios':'Calculando óptimo'}
-            </span>
-          </div>
-        </div>
-        {scanStatus.phase==='locating'&&(
-          <div className="flex flex-col items-center justify-center flex-1 space-y-6">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-full border-2 scan-pulse flex items-center justify-center" style={{ borderColor:'rgba(16,185,129,.4)', background:'rgba(16,185,129,.08)' }}>
-                <MapPin size={36} className="text-emerald-400"/>
-              </div>
-              <div className="absolute -inset-3 rounded-full border opacity-20 animate-ping" style={{ borderColor:'#10b981' }}/>
-            </div>
-            <div className="text-center">
-              <p className="text-white font-black text-lg truncate max-w-xs">{userAddress}</p>
-              <p className="text-slate-500 text-xs mt-1">Calibrando precios de tu zona...</p>
+  const renderScanning = () => {
+    const total = itemsToScan.length;
+    const done = scanStatus.doneCount || 0;
+    return (
+      <div className="flex flex-col h-full relative overflow-hidden" style={{ background:'#0a0f1e', fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
+        <style>{STYLES}</style>
+        <div className="absolute inset-0 opacity-5" style={{ backgroundImage:'linear-gradient(rgba(16,185,129,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(16,185,129,.5) 1px,transparent 1px)', backgroundSize:'32px 32px' }}/>
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full opacity-10 blur-3xl" style={{ background:'#10b981' }}/>
+        <div className="relative z-10 flex flex-col h-full p-6 pt-14">
+          <div className="flex justify-center mb-8">
+            <div className="flex items-center space-x-2 px-4 py-2 rounded-full border glow-box" style={{ background:'rgba(16,185,129,.1)', borderColor:'rgba(16,185,129,.3)' }}>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 scan-pulse"/>
+              <span className="text-[11px] font-black uppercase tracking-widest text-emerald-400">
+                {scanStatus.phase==='locating'?'Geolocalizando':scanStatus.phase==='connecting'?'Conectando':scanStatus.phase==='scraping'?'Buscando precios y fotos':'Calculando óptimo'}
+              </span>
             </div>
           </div>
-        )}
-        {scanStatus.phase!=='locating'&&(
-          <div className="flex flex-col flex-1 space-y-5 overflow-hidden">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Progreso</span>
-                <span className="text-sm font-black text-emerald-400">{scanProgress}%</span>
+
+          {scanStatus.phase==='locating'&&(
+            <div className="flex flex-col items-center justify-center flex-1 space-y-6">
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full border-2 scan-pulse flex items-center justify-center" style={{ borderColor:'rgba(16,185,129,.4)', background:'rgba(16,185,129,.08)' }}>
+                  <MapPin size={36} className="text-emerald-400"/>
+                </div>
+                <div className="absolute -inset-3 rounded-full border opacity-20 animate-ping" style={{ borderColor:'#10b981' }}/>
               </div>
-              <div className="h-2 rounded-full overflow-hidden" style={{ background:'rgba(255,255,255,.05)' }}>
-                <div className="h-full rounded-full transition-all duration-700" style={{ width:`${scanProgress}%`, background:'linear-gradient(90deg,#10b981,#34d399)' }}/>
+              <div className="text-center">
+                <p className="text-white font-black text-lg truncate max-w-xs">{userAddress}</p>
+                <p className="text-slate-500 text-xs mt-1">Calibrando precios de tu zona...</p>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto space-y-2">
-              {itemsToScan.map((item,idx)=>{
-                const isScanning = scanStatus.phase==='scraping'&&scanStatus.itemIndex===idx;
-                const isDone = scanStatus.phase==='calculating'||scanStatus.itemIndex>idx;
-                return (
-                  <div key={idx} className={`p-3.5 rounded-2xl border transition-all ${isScanning?'glow-box':isDone?'opacity-40':'opacity-20'}`}
-                    style={{ background:isScanning?'rgba(16,185,129,.06)':'rgba(255,255,255,.02)', borderColor:isScanning?'rgba(16,185,129,.35)':'rgba(255,255,255,.06)' }}>
-                    <div className="flex items-center justify-between">
+          )}
+
+          {(scanStatus.phase==='connecting'||scanStatus.phase==='scraping'||scanStatus.phase==='calculating')&&(
+            <div className="flex flex-col flex-1 space-y-5 overflow-hidden">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Progreso</span>
+                  <span className="text-sm font-black text-emerald-400">{scanProgress}%</span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background:'rgba(255,255,255,.05)' }}>
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width:`${scanProgress}%`, background:'linear-gradient(90deg,#10b981,#34d399)' }}/>
+                </div>
+              </div>
+
+              {/* Productos con estado paralelo */}
+              <div className="flex-1 overflow-y-auto">
+                {scanStatus.phase==='scraping' ? (
+                  <div className="space-y-3">
+                    {/* Barra de precios (calculados instantáneamente) */}
+                    <div className="p-3.5 rounded-2xl border glow-box" style={{ background:'rgba(16,185,129,.06)', borderColor:'rgba(16,185,129,.35)' }}>
                       <div className="flex items-center space-x-2.5">
-                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center flex-shrink-0 ${isDone?'bg-emerald-500':isScanning?'bg-emerald-500/20 border border-emerald-500/40':'bg-white/5'}`}>
-                          {isDone?<CheckCircle2 size={12} className="text-white"/>:isScanning?<Loader2 size={12} className="text-emerald-400 animate-spin"/>:null}
-                        </div>
-                        <p className={`font-bold text-sm ${isScanning?'text-white':isDone?'text-white/50':'text-white/30'}`}>{item}</p>
+                        <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0"/>
+                        <p className="text-emerald-300 font-black text-sm">{total} productos — precios calculados</p>
                       </div>
-                      {isDone&&<span className="text-[9px] font-black text-emerald-400 uppercase">Listo</span>}
                     </div>
-                    {isScanning&&(
-                      <div className="flex items-center space-x-2 mt-2 pl-7">
-                        <div className="flex space-x-0.5">{[0,1,2].map(i=><div key={i} className="w-1 rounded-full bg-emerald-400" style={{ height:'12px', animation:`pulse2 ${0.8+i*.15}s ease-in-out infinite`, animationDelay:`${i*.2}s` }}/>)}</div>
-                        <span className="text-[10px] text-emerald-400/80 truncate">{scanStatus.currentStoreScraping}</span>
+                    {/* Fotos en paralelo */}
+                    <div className="p-3.5 rounded-2xl border" style={{ background:'rgba(255,255,255,.02)', borderColor:'rgba(255,255,255,.08)' }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Loader2 size={14} className="text-emerald-400 animate-spin flex-shrink-0"/>
+                          <p className="text-white/80 font-black text-sm">Fotos de productos</p>
+                        </div>
+                        <span className="text-[10px] font-black text-emerald-400">{done}/{total}</span>
                       </div>
-                    )}
+                      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-300" style={{ width:`${total>0?Math.round((done/total)*100):0}%`, background:'linear-gradient(90deg,#10b981,#34d399)' }}/>
+                      </div>
+                      <p className="text-slate-500 text-[10px] mt-1.5">Descargando en paralelo · Open Food Facts</p>
+                    </div>
+                    {/* Grid de supermercados */}
+                    <div className="grid grid-cols-4 gap-2 mt-2">
+                      {SUPERMERCADOS.map((store,i)=>(
+                        <div key={i} className="flex flex-col items-center p-2 rounded-xl border" style={{ background:'rgba(255,255,255,.03)', borderColor:'rgba(255,255,255,.06)' }}>
+                          <StoreLogo store={store} className="w-8 h-8 rounded-lg mb-1"/>
+                          <span className="text-[8px] font-bold text-white/30 text-center leading-none">{store.nombre}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-            {scanStatus.phase==='calculating'&&(
-              <div className="p-4 rounded-2xl border text-center glow-box" style={{ background:'rgba(16,185,129,.06)', borderColor:'rgba(16,185,129,.3)' }}>
-                <p className="text-emerald-400 font-black text-xs uppercase tracking-widest">Calculando cesta óptima...</p>
+                ) : (
+                  <div className="space-y-2">
+                    {SUPERMERCADOS.map((store,i)=>(
+                      <div key={i} className="p-3 rounded-2xl border flex items-center space-x-3 opacity-30" style={{ background:'rgba(255,255,255,.02)', borderColor:'rgba(255,255,255,.06)' }}>
+                        <StoreLogo store={store} className="w-6 h-6 rounded-md flex-shrink-0"/>
+                        <span className="text-white/50 text-xs font-bold">{store.nombre}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+
+              {scanStatus.phase==='calculating'&&(
+                <div className="p-4 rounded-2xl border text-center glow-box" style={{ background:'rgba(16,185,129,.06)', borderColor:'rgba(16,185,129,.3)' }}>
+                  <p className="text-emerald-400 font-black text-xs uppercase tracking-widest">Calculando cesta óptima...</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderResults = () => {
     if(!results) return null;
     const storesUsed = Object.values(groupedByStore).filter(g=>g.items.length>0);
     const savings = totalExpensive-totalOptimized;
-    const withPhotos = results.items.filter(i=>i.photoUrl).length;
     return (
       <div className="flex flex-col h-full relative" style={{ background:'#f7f8fc', fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
         <style>{STYLES}</style>
