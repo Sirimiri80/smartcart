@@ -166,19 +166,25 @@ const ApiService = {
   },
   analyzeImageWithAI: async (base64String, mimeType, apiKey) => {
     if (!apiKey) throw new Error("API Key requerida");
-    const payload = { contents: [{ role: "user", parts: [{ text: "Identifica el producto de supermercado en esta imagen. Devuelve SOLO el nombre del producto y la marca en 1 a 4 palabras. No devuelvas NINGÚN otro texto, ni puntuación." }, { inlineData: { mimeType, data: base64String } }] }] };
-    let delay = 1000;
-    for (let i = 0; i < 3; i++) {
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text;
-      } catch { await new Promise(r => setTimeout(r, delay)); delay *= 2; }
-    }
-    throw new Error("Error: " + JSON.stringify(data));
+    const payload = {
+      contents: [{
+        role: "user",
+        parts: [
+          { text: "Identifica el producto de supermercado en esta imagen. Devuelve SOLO el nombre del producto y la marca en 1 a 4 palabras." },
+          { inlineData: { mimeType, data: base64String } }
+        ]
+      }]
+    };
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    const data = await res.json();
+    console.log("Gemini response:", JSON.stringify(data));
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (text) return text;
+    throw new Error(data.error?.message || "Sin respuesta de Gemini");
   }
-};
 
 // ==========================================
 // 4. UTILIDADES
