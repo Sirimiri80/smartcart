@@ -4,13 +4,12 @@ import {
   Store, CheckCircle2, Receipt, Info,
   Loader2, Globe, Sparkles, Target, List, Camera,
   Scale, Package, ArrowRight, Zap, Star, Clock,
-  ShoppingBasket, TrendingDown, Bell, Heart, X
+  ShoppingBasket, TrendingDown, Bell, Heart, X, ImageOff
 } from 'lucide-react';
 
 // ==========================================
-// 1. CONSTANTES Y BASE DE DATOS AMPLIADA
+// 1. CONSTANTES Y BASE DE DATOS
 // ==========================================
-
 const SUPERMERCADOS = [
   { id: 'mercadona', nombre: 'Mercadona', color: 'bg-green-100 text-green-800', border: 'border-green-300', headerBg: 'bg-[#008e59]', headerText: 'text-white', accent: '#008e59' },
   { id: 'carrefour', nombre: 'Carrefour', color: 'bg-blue-100 text-blue-800', border: 'border-blue-300', headerBg: 'bg-[#00387b]', headerText: 'text-white', accent: '#00387b' },
@@ -22,112 +21,113 @@ const SUPERMERCADOS = [
   { id: 'alcampo', nombre: 'Alcampo', color: 'bg-rose-100 text-rose-800', border: 'border-rose-300', headerBg: 'bg-[#e3001b]', headerText: 'text-white', accent: '#e3001b' }
 ];
 
+// Queries optimizadas para Open Food Facts (en español, más resultados)
 const REAL_PRICES_DB = {
-  'leche entera': { cat: 'leche', isBeverage: true, strictBrand: null, unit: 'L', options: [
-    { storeId: 'aldi', brand: 'Milsani (M. Blanca)', isBrand: false, price: 0.88, qty: 1, format: 'Brik 1L' },
-    { storeId: 'lidl', brand: 'Milbona (M. Blanca)', isBrand: false, price: 0.89, qty: 1, format: 'Brik 1L' },
-    { storeId: 'carrefour', brand: 'Carrefour Clasic', isBrand: false, price: 0.90, qty: 1, format: 'Brik 1L' },
-    { storeId: 'mercadona', brand: 'Hacendado (M. Blanca)', isBrand: false, price: 0.91, qty: 1, format: 'Brik 1L' },
-    { storeId: 'dia', brand: 'Dia Láctea', isBrand: false, price: 5.40, qty: 6, format: 'Pack 6x1L' },
-    { storeId: 'alcampo', brand: 'Auchan (M. Blanca)', isBrand: false, price: 1.35, qty: 1.5, format: 'Botella 1.5L' },
-    { storeId: 'carrefour', brand: 'Pascual (1ª Marca)', isBrand: true, price: 1.34, qty: 1, format: 'Brik 1L' },
-    { storeId: 'bm', brand: 'Pascual (1ª Marca)', isBrand: true, price: 7.95, qty: 6, format: 'Pack 6x1L' }
+  'leche entera': { cat: 'leche', isBeverage: true, strictBrand: null, unit: 'L', offQuery: 'leche entera', options: [
+    { storeId: 'aldi',      brand: 'Milsani (M. Blanca)',    isBrand: false, price: 0.88, qty: 1,   format: 'Brik 1L' },
+    { storeId: 'lidl',      brand: 'Milbona (M. Blanca)',    isBrand: false, price: 0.89, qty: 1,   format: 'Brik 1L' },
+    { storeId: 'carrefour', brand: 'Carrefour Clasic',       isBrand: false, price: 0.90, qty: 1,   format: 'Brik 1L' },
+    { storeId: 'mercadona', brand: 'Hacendado (M. Blanca)',  isBrand: false, price: 0.91, qty: 1,   format: 'Brik 1L' },
+    { storeId: 'dia',       brand: 'Dia Láctea',             isBrand: false, price: 5.40, qty: 6,   format: 'Pack 6x1L' },
+    { storeId: 'alcampo',   brand: 'Auchan (M. Blanca)',     isBrand: false, price: 1.35, qty: 1.5, format: 'Botella 1.5L' },
+    { storeId: 'carrefour', brand: 'Pascual (1ª Marca)',     isBrand: true,  price: 1.34, qty: 1,   format: 'Brik 1L' },
+    { storeId: 'bm',        brand: 'Pascual (1ª Marca)',     isBrand: true,  price: 7.95, qty: 6,   format: 'Pack 6x1L' }
   ]},
-  'cola cao': { cat: 'cacao', isBeverage: false, strictBrand: 'Cola Cao', unit: 'kg', options: [
-    { storeId: 'alcampo', brand: 'Cola Cao Original', isBrand: true, price: 3.45, qty: 0.38, format: 'Bote 380g' },
-    { storeId: 'mercadona', brand: 'Cola Cao Original', isBrand: true, price: 5.95, qty: 0.76, format: 'Bote 760g' },
-    { storeId: 'dia', brand: 'Cola Cao Original', isBrand: true, price: 5.99, qty: 0.76, format: 'Bote 760g' },
-    { storeId: 'carrefour', brand: 'Cola Cao Original', isBrand: true, price: 8.99, qty: 1.2, format: 'Bolsa 1.2Kg' },
-    { storeId: 'eroski', brand: 'Cola Cao Original', isBrand: true, price: 14.50, qty: 2.5, format: 'Familiar 2.5Kg' },
-    { storeId: 'bm', brand: 'Cola Cao Original', isBrand: true, price: 6.25, qty: 0.76, format: 'Bote 760g' }
+  'cola cao': { cat: 'cacao', isBeverage: false, strictBrand: 'Cola Cao', unit: 'kg', offQuery: 'cola cao', options: [
+    { storeId: 'alcampo',   brand: 'Cola Cao Original', isBrand: true, price: 3.45,  qty: 0.38, format: 'Bote 380g' },
+    { storeId: 'mercadona', brand: 'Cola Cao Original', isBrand: true, price: 5.95,  qty: 0.76, format: 'Bote 760g' },
+    { storeId: 'dia',       brand: 'Cola Cao Original', isBrand: true, price: 5.99,  qty: 0.76, format: 'Bote 760g' },
+    { storeId: 'carrefour', brand: 'Cola Cao Original', isBrand: true, price: 8.99,  qty: 1.2,  format: 'Bolsa 1.2Kg' },
+    { storeId: 'eroski',    brand: 'Cola Cao Original', isBrand: true, price: 14.50, qty: 2.5,  format: 'Familiar 2.5Kg' },
+    { storeId: 'bm',        brand: 'Cola Cao Original', isBrand: true, price: 6.25,  qty: 0.76, format: 'Bote 760g' }
   ]},
-  'pepsi max lima': { cat: 'pepsi', isBeverage: true, strictBrand: 'Pepsi Max Lima', unit: 'L', options: [
+  'pepsi max lima': { cat: 'pepsi', isBeverage: true, strictBrand: 'Pepsi Max Lima', unit: 'L', offQuery: 'pepsi max lime', options: [
     { storeId: 'mercadona', brand: 'Pepsi Max Lima', isBrand: true, price: 0.75, qty: 0.33, format: 'Lata 33cl' },
     { storeId: 'carrefour', brand: 'Pepsi Max Lima', isBrand: true, price: 0.72, qty: 0.33, format: 'Lata 33cl' },
-    { storeId: 'dia', brand: 'Pepsi Max Lima', isBrand: true, price: 1.10, qty: 0.5, format: 'Botella 500ml' },
-    { storeId: 'alcampo', brand: 'Pepsi Max Lima', isBrand: true, price: 1.89, qty: 2.0, format: 'Botella 2L' },
-    { storeId: 'aldi', brand: 'Pepsi Max Lima', isBrand: true, price: 1.95, qty: 2.0, format: 'Botella 2L' },
-    { storeId: 'eroski', brand: 'Pepsi Max Lima', isBrand: true, price: 3.80, qty: 4.0, format: 'Pack 2x2L' }
+    { storeId: 'dia',       brand: 'Pepsi Max Lima', isBrand: true, price: 1.10, qty: 0.5,  format: 'Botella 500ml' },
+    { storeId: 'alcampo',   brand: 'Pepsi Max Lima', isBrand: true, price: 1.89, qty: 2.0,  format: 'Botella 2L' },
+    { storeId: 'aldi',      brand: 'Pepsi Max Lima', isBrand: true, price: 1.95, qty: 2.0,  format: 'Botella 2L' },
+    { storeId: 'eroski',    brand: 'Pepsi Max Lima', isBrand: true, price: 3.80, qty: 4.0,  format: 'Pack 2x2L' }
   ]},
-  'huevos docena': { cat: 'huevo', isBeverage: false, strictBrand: null, unit: 'ud', options: [
-    { storeId: 'aldi', brand: 'El Mercado (M. Blanca)', isBrand: false, price: 1.35, qty: 6, format: 'Media M' },
-    { storeId: 'alcampo', brand: 'Auchan (M. Blanca)', isBrand: false, price: 2.19, qty: 12, format: 'Docena L' },
-    { storeId: 'lidl', brand: 'Milbona (M. Blanca)', isBrand: false, price: 2.25, qty: 12, format: 'Docena L' },
-    { storeId: 'mercadona', brand: 'Hacendado (M. Blanca)', isBrand: false, price: 2.35, qty: 12, format: 'Docena L' },
-    { storeId: 'carrefour', brand: 'Carrefour (M. Blanca)', isBrand: false, price: 4.50, qty: 24, format: 'Cartón 24ud' },
-    { storeId: 'mercadona', brand: 'Granjas S. Miguel', isBrand: true, price: 3.20, qty: 12, format: 'Camperos 12ud' }
+  'huevos docena': { cat: 'huevo', isBeverage: false, strictBrand: null, unit: 'ud', offQuery: 'huevos camperos docena', options: [
+    { storeId: 'aldi',      brand: 'El Mercado (M. Blanca)',  isBrand: false, price: 1.35, qty: 6,  format: 'Media M' },
+    { storeId: 'alcampo',   brand: 'Auchan (M. Blanca)',      isBrand: false, price: 2.19, qty: 12, format: 'Docena L' },
+    { storeId: 'lidl',      brand: 'Milbona (M. Blanca)',     isBrand: false, price: 2.25, qty: 12, format: 'Docena L' },
+    { storeId: 'mercadona', brand: 'Hacendado (M. Blanca)',   isBrand: false, price: 2.35, qty: 12, format: 'Docena L' },
+    { storeId: 'carrefour', brand: 'Carrefour (M. Blanca)',   isBrand: false, price: 4.50, qty: 24, format: 'Cartón 24ud' },
+    { storeId: 'mercadona', brand: 'Granjas S. Miguel',       isBrand: true,  price: 3.20, qty: 12, format: 'Camperos 12ud' }
   ]},
-  'aceite oliva': { cat: 'aceite', isBeverage: false, strictBrand: null, unit: 'L', options: [
-    { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 3.99, qty: 0.75, format: 'Botella 750ml' },
-    { storeId: 'lidl', brand: 'Belivos', isBrand: false, price: 3.79, qty: 0.75, format: 'Botella 750ml' },
-    { storeId: 'carrefour', brand: 'Carrefour', isBrand: false, price: 7.49, qty: 1.5, format: 'Botella 1.5L' },
-    { storeId: 'dia', brand: 'Dia', isBrand: false, price: 3.85, qty: 0.75, format: 'Botella 750ml' },
-    { storeId: 'alcampo', brand: 'Auchan', isBrand: false, price: 7.20, qty: 1.5, format: 'Botella 1.5L' },
-    { storeId: 'aldi', brand: 'Primadonna', isBrand: false, price: 3.69, qty: 0.75, format: 'Botella 750ml' }
+  'aceite oliva': { cat: 'aceite', isBeverage: false, strictBrand: null, unit: 'L', offQuery: 'aceite oliva virgen extra', options: [
+    { storeId: 'mercadona', brand: 'Hacendado',  isBrand: false, price: 3.99, qty: 0.75, format: 'Botella 750ml' },
+    { storeId: 'lidl',      brand: 'Belivos',    isBrand: false, price: 3.79, qty: 0.75, format: 'Botella 750ml' },
+    { storeId: 'carrefour', brand: 'Carrefour',  isBrand: false, price: 7.49, qty: 1.5,  format: 'Botella 1.5L' },
+    { storeId: 'dia',       brand: 'Dia',        isBrand: false, price: 3.85, qty: 0.75, format: 'Botella 750ml' },
+    { storeId: 'alcampo',   brand: 'Auchan',     isBrand: false, price: 7.20, qty: 1.5,  format: 'Botella 1.5L' },
+    { storeId: 'aldi',      brand: 'Primadonna', isBrand: false, price: 3.69, qty: 0.75, format: 'Botella 750ml' }
   ]},
-  'pan de molde': { cat: 'pan', isBeverage: false, strictBrand: null, unit: 'kg', options: [
-    { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 1.05, qty: 0.45, format: 'Bolsa 450g' },
-    { storeId: 'lidl', brand: 'Lieken Urkorn', isBrand: false, price: 1.25, qty: 0.5, format: 'Bolsa 500g' },
-    { storeId: 'dia', brand: 'Dia', isBrand: false, price: 0.99, qty: 0.45, format: 'Bolsa 450g' },
-    { storeId: 'carrefour', brand: 'Bimbo', isBrand: true, price: 1.75, qty: 0.68, format: 'Grande 680g' },
-    { storeId: 'alcampo', brand: 'Auchan', isBrand: false, price: 1.10, qty: 0.5, format: 'Bolsa 500g' },
-    { storeId: 'aldi', brand: 'El Molino', isBrand: false, price: 0.95, qty: 0.45, format: 'Bolsa 450g' }
+  'pan de molde': { cat: 'pan', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'pan de molde bimbo', options: [
+    { storeId: 'mercadona', brand: 'Hacendado',    isBrand: false, price: 1.05, qty: 0.45, format: 'Bolsa 450g' },
+    { storeId: 'lidl',      brand: 'Lieken Urkorn',isBrand: false, price: 1.25, qty: 0.5,  format: 'Bolsa 500g' },
+    { storeId: 'dia',       brand: 'Dia',          isBrand: false, price: 0.99, qty: 0.45, format: 'Bolsa 450g' },
+    { storeId: 'carrefour', brand: 'Bimbo',        isBrand: true,  price: 1.75, qty: 0.68, format: 'Grande 680g' },
+    { storeId: 'alcampo',   brand: 'Auchan',       isBrand: false, price: 1.10, qty: 0.5,  format: 'Bolsa 500g' },
+    { storeId: 'aldi',      brand: 'El Molino',    isBrand: false, price: 0.95, qty: 0.45, format: 'Bolsa 450g' }
   ]},
-  'arroz': { cat: 'arroz', isBeverage: false, strictBrand: null, unit: 'kg', options: [
-    { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 0.99, qty: 1, format: 'Bolsa 1Kg' },
-    { storeId: 'lidl', brand: 'Combino', isBrand: false, price: 0.89, qty: 1, format: 'Bolsa 1Kg' },
-    { storeId: 'dia', brand: 'Dia', isBrand: false, price: 0.95, qty: 1, format: 'Bolsa 1Kg' },
-    { storeId: 'carrefour', brand: 'Carrefour', isBrand: false, price: 1.85, qty: 2, format: 'Bolsa 2Kg' },
-    { storeId: 'alcampo', brand: 'Auchan', isBrand: false, price: 0.92, qty: 1, format: 'Bolsa 1Kg' },
-    { storeId: 'aldi', brand: 'Grandessa', isBrand: false, price: 0.85, qty: 1, format: 'Bolsa 1Kg' }
+  'arroz': { cat: 'arroz', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'arroz largo grano', options: [
+    { storeId: 'mercadona', brand: 'Hacendado',  isBrand: false, price: 0.99, qty: 1, format: 'Bolsa 1Kg' },
+    { storeId: 'lidl',      brand: 'Combino',    isBrand: false, price: 0.89, qty: 1, format: 'Bolsa 1Kg' },
+    { storeId: 'dia',       brand: 'Dia',        isBrand: false, price: 0.95, qty: 1, format: 'Bolsa 1Kg' },
+    { storeId: 'carrefour', brand: 'Carrefour',  isBrand: false, price: 1.85, qty: 2, format: 'Bolsa 2Kg' },
+    { storeId: 'alcampo',   brand: 'Auchan',     isBrand: false, price: 0.92, qty: 1, format: 'Bolsa 1Kg' },
+    { storeId: 'aldi',      brand: 'Grandessa',  isBrand: false, price: 0.85, qty: 1, format: 'Bolsa 1Kg' }
   ]},
-  'pasta macarrones': { cat: 'pasta', isBeverage: false, strictBrand: null, unit: 'kg', options: [
+  'pasta macarrones': { cat: 'pasta', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'macarrones pasta gallo', options: [
     { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 0.75, qty: 0.5, format: 'Bolsa 500g' },
-    { storeId: 'lidl', brand: 'Combino', isBrand: false, price: 0.69, qty: 0.5, format: 'Bolsa 500g' },
-    { storeId: 'dia', brand: 'Dia', isBrand: false, price: 0.72, qty: 0.5, format: 'Bolsa 500g' },
-    { storeId: 'carrefour', brand: 'Gallo', isBrand: true, price: 1.29, qty: 0.5, format: 'Bolsa 500g' },
-    { storeId: 'alcampo', brand: 'Auchan', isBrand: false, price: 0.70, qty: 0.5, format: 'Bolsa 500g' },
-    { storeId: 'aldi', brand: 'Combino', isBrand: false, price: 0.65, qty: 0.5, format: 'Bolsa 500g' }
+    { storeId: 'lidl',      brand: 'Combino',   isBrand: false, price: 0.69, qty: 0.5, format: 'Bolsa 500g' },
+    { storeId: 'dia',       brand: 'Dia',       isBrand: false, price: 0.72, qty: 0.5, format: 'Bolsa 500g' },
+    { storeId: 'carrefour', brand: 'Gallo',     isBrand: true,  price: 1.29, qty: 0.5, format: 'Bolsa 500g' },
+    { storeId: 'alcampo',   brand: 'Auchan',    isBrand: false, price: 0.70, qty: 0.5, format: 'Bolsa 500g' },
+    { storeId: 'aldi',      brand: 'Combino',   isBrand: false, price: 0.65, qty: 0.5, format: 'Bolsa 500g' }
   ]},
-  'yogur natural': { cat: 'yogur', isBeverage: false, strictBrand: null, unit: 'kg', options: [
+  'yogur natural': { cat: 'yogur', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'yogur natural danone', options: [
     { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 0.79, qty: 0.5, format: 'Pack 4x125g' },
-    { storeId: 'lidl', brand: 'Milbona', isBrand: false, price: 0.69, qty: 0.5, format: 'Pack 4x125g' },
-    { storeId: 'dia', brand: 'Dia', isBrand: false, price: 0.75, qty: 0.5, format: 'Pack 4x125g' },
-    { storeId: 'carrefour', brand: 'Danone', isBrand: true, price: 1.49, qty: 0.5, format: 'Pack 4x125g' },
-    { storeId: 'alcampo', brand: 'Auchan', isBrand: false, price: 0.72, qty: 0.5, format: 'Pack 4x125g' },
-    { storeId: 'aldi', brand: 'Milsani', isBrand: false, price: 0.65, qty: 0.5, format: 'Pack 4x125g' }
+    { storeId: 'lidl',      brand: 'Milbona',   isBrand: false, price: 0.69, qty: 0.5, format: 'Pack 4x125g' },
+    { storeId: 'dia',       brand: 'Dia',       isBrand: false, price: 0.75, qty: 0.5, format: 'Pack 4x125g' },
+    { storeId: 'carrefour', brand: 'Danone',    isBrand: true,  price: 1.49, qty: 0.5, format: 'Pack 4x125g' },
+    { storeId: 'alcampo',   brand: 'Auchan',    isBrand: false, price: 0.72, qty: 0.5, format: 'Pack 4x125g' },
+    { storeId: 'aldi',      brand: 'Milsani',   isBrand: false, price: 0.65, qty: 0.5, format: 'Pack 4x125g' }
   ]},
-  'mantequilla': { cat: 'mantequilla', isBeverage: false, strictBrand: null, unit: 'kg', options: [
+  'mantequilla': { cat: 'mantequilla', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'mantequilla president', options: [
     { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 1.45, qty: 0.25, format: 'Tarrina 250g' },
-    { storeId: 'lidl', brand: 'Milbona', isBrand: false, price: 1.35, qty: 0.25, format: 'Tarrina 250g' },
-    { storeId: 'dia', brand: 'Dia', isBrand: false, price: 1.40, qty: 0.25, format: 'Tarrina 250g' },
-    { storeId: 'carrefour', brand: 'Président', isBrand: true, price: 2.99, qty: 0.25, format: 'Tarrina 250g' },
-    { storeId: 'alcampo', brand: 'Auchan', isBrand: false, price: 1.39, qty: 0.25, format: 'Tarrina 250g' },
-    { storeId: 'aldi', brand: 'Milsani', isBrand: false, price: 1.29, qty: 0.25, format: 'Tarrina 250g' }
+    { storeId: 'lidl',      brand: 'Milbona',   isBrand: false, price: 1.35, qty: 0.25, format: 'Tarrina 250g' },
+    { storeId: 'dia',       brand: 'Dia',       isBrand: false, price: 1.40, qty: 0.25, format: 'Tarrina 250g' },
+    { storeId: 'carrefour', brand: 'Président', isBrand: true,  price: 2.99, qty: 0.25, format: 'Tarrina 250g' },
+    { storeId: 'alcampo',   brand: 'Auchan',    isBrand: false, price: 1.39, qty: 0.25, format: 'Tarrina 250g' },
+    { storeId: 'aldi',      brand: 'Milsani',   isBrand: false, price: 1.29, qty: 0.25, format: 'Tarrina 250g' }
   ]},
-  'tomate frito': { cat: 'tomate', isBeverage: false, strictBrand: null, unit: 'kg', options: [
+  'tomate frito': { cat: 'tomate', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'tomate frito orlando', options: [
     { storeId: 'mercadona', brand: 'Hacendado', isBrand: false, price: 0.85, qty: 0.4, format: 'Bote 400g' },
-    { storeId: 'lidl', brand: 'Combino', isBrand: false, price: 0.79, qty: 0.4, format: 'Bote 400g' },
-    { storeId: 'dia', brand: 'Dia', isBrand: false, price: 0.82, qty: 0.4, format: 'Bote 400g' },
-    { storeId: 'carrefour', brand: 'Orlando', isBrand: true, price: 1.29, qty: 0.4, format: 'Bote 400g' },
-    { storeId: 'alcampo', brand: 'Auchan', isBrand: false, price: 0.80, qty: 0.4, format: 'Bote 400g' },
-    { storeId: 'aldi', brand: 'Grandessa', isBrand: false, price: 0.75, qty: 0.4, format: 'Bote 400g' }
+    { storeId: 'lidl',      brand: 'Combino',   isBrand: false, price: 0.79, qty: 0.4, format: 'Bote 400g' },
+    { storeId: 'dia',       brand: 'Dia',       isBrand: false, price: 0.82, qty: 0.4, format: 'Bote 400g' },
+    { storeId: 'carrefour', brand: 'Orlando',   isBrand: true,  price: 1.29, qty: 0.4, format: 'Bote 400g' },
+    { storeId: 'alcampo',   brand: 'Auchan',    isBrand: false, price: 0.80, qty: 0.4, format: 'Bote 400g' },
+    { storeId: 'aldi',      brand: 'Grandessa', isBrand: false, price: 0.75, qty: 0.4, format: 'Bote 400g' }
   ]},
-  'pollo entero': { cat: 'carne', isBeverage: false, strictBrand: null, unit: 'kg', options: [
-    { storeId: 'mercadona', brand: 'Campofrío', isBrand: true, price: 4.50, qty: 1.5, format: 'Pollo 1.5Kg' },
-    { storeId: 'lidl', brand: 'Lidl Fresh', isBrand: false, price: 3.99, qty: 1.5, format: 'Pollo 1.5Kg' },
-    { storeId: 'dia', brand: 'Dia Fresh', isBrand: false, price: 4.20, qty: 1.5, format: 'Pollo 1.5Kg' },
-    { storeId: 'carrefour', brand: 'Carrefour Fresh', isBrand: false, price: 4.80, qty: 1.8, format: 'Pollo 1.8Kg' },
-    { storeId: 'alcampo', brand: 'Auchan Fresh', isBrand: false, price: 4.10, qty: 1.5, format: 'Pollo 1.5Kg' },
-    { storeId: 'aldi', brand: 'Aldi Fresh', isBrand: false, price: 3.89, qty: 1.5, format: 'Pollo 1.5Kg' }
+  'pollo entero': { cat: 'carne', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'pollo entero campofrio', options: [
+    { storeId: 'mercadona', brand: 'Campofrío',         isBrand: true,  price: 4.50, qty: 1.5, format: 'Pollo 1.5Kg' },
+    { storeId: 'lidl',      brand: 'Lidl Fresh',        isBrand: false, price: 3.99, qty: 1.5, format: 'Pollo 1.5Kg' },
+    { storeId: 'dia',       brand: 'Dia Fresh',         isBrand: false, price: 4.20, qty: 1.5, format: 'Pollo 1.5Kg' },
+    { storeId: 'carrefour', brand: 'Carrefour Fresh',   isBrand: false, price: 4.80, qty: 1.8, format: 'Pollo 1.8Kg' },
+    { storeId: 'alcampo',   brand: 'Auchan Fresh',      isBrand: false, price: 4.10, qty: 1.5, format: 'Pollo 1.5Kg' },
+    { storeId: 'aldi',      brand: 'Aldi Fresh',        isBrand: false, price: 3.89, qty: 1.5, format: 'Pollo 1.5Kg' }
   ]},
-  'detergente ropa': { cat: 'limpieza', isBeverage: false, strictBrand: null, unit: 'kg', options: [
+  'detergente ropa': { cat: 'limpieza', isBeverage: false, strictBrand: null, unit: 'kg', offQuery: 'detergente lavadora ariel', options: [
     { storeId: 'mercadona', brand: 'Bosque Verde', isBrand: false, price: 3.99, qty: 2.7, format: 'Caja 27 dosis' },
-    { storeId: 'lidl', brand: 'W5', isBrand: false, price: 3.49, qty: 2.4, format: 'Caja 24 dosis' },
-    { storeId: 'dia', brand: 'Dia', isBrand: false, price: 3.75, qty: 2.5, format: 'Caja 25 dosis' },
-    { storeId: 'carrefour', brand: 'Ariel', isBrand: true, price: 9.99, qty: 3.6, format: 'Caja 36 dosis' },
-    { storeId: 'alcampo', brand: 'Auchan', isBrand: false, price: 3.89, qty: 2.7, format: 'Caja 27 dosis' },
-    { storeId: 'aldi', brand: 'Tandil', isBrand: false, price: 3.29, qty: 2.4, format: 'Caja 24 dosis' }
+    { storeId: 'lidl',      brand: 'W5',           isBrand: false, price: 3.49, qty: 2.4, format: 'Caja 24 dosis' },
+    { storeId: 'dia',       brand: 'Dia',          isBrand: false, price: 3.75, qty: 2.5, format: 'Caja 25 dosis' },
+    { storeId: 'carrefour', brand: 'Ariel',        isBrand: true,  price: 9.99, qty: 3.6, format: 'Caja 36 dosis' },
+    { storeId: 'alcampo',   brand: 'Auchan',       isBrand: false, price: 3.89, qty: 2.7, format: 'Caja 27 dosis' },
+    { storeId: 'aldi',      brand: 'Tandil',       isBrand: false, price: 3.29, qty: 2.4, format: 'Caja 24 dosis' }
   ]}
 };
 
@@ -151,19 +151,95 @@ const Storage = {
 };
 
 // ==========================================
-// 3. SERVICIOS EXTERNOS
+// 3. SERVICIO API MERCADONA (para precios)
+// ==========================================
+const MercadonaService = {
+  WAREHOUSES: ['ssa1', 'bil1', 'mad1', 'vlc1'],
+  PROXIES: [
+    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  ],
+  buildUrl: (query, wh) =>
+    `https://tienda.mercadona.es/api/products/?term=${encodeURIComponent(query)}&lang=es&wh=${wh}`,
+  parseProduct: (product) => {
+    if (!product) return null;
+    const pi = product.price_instructions || {};
+    const price = parseFloat(pi.unit_price || pi.bulk_price || 0);
+    const photo = product.photos?.[0];
+    return {
+      id: product.id,
+      name: product.display_name || '',
+      price,
+      brand: product.brand || null,
+      photoUrl: photo?.zoom || photo?.regular || photo?.thumbnail || null,
+      format: pi.size_format || null,
+      unitSize: parseFloat(pi.unit_size || 1),
+    };
+  },
+  searchProduct: async (query) => {
+    for (const makeProxyUrl of MercadonaService.PROXIES) {
+      for (const wh of MercadonaService.WAREHOUSES) {
+        try {
+          const targetUrl = MercadonaService.buildUrl(query, wh);
+          const proxyUrl = makeProxyUrl(targetUrl);
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 5000);
+          const res = await fetch(proxyUrl, { signal: controller.signal });
+          clearTimeout(timer);
+          if (!res.ok) continue;
+          const text = await res.text();
+          const data = JSON.parse(text);
+          const items = Array.isArray(data) ? data : (data.results || []);
+          if (items.length > 0) {
+            const parsed = MercadonaService.parseProduct(items[0]);
+            if (parsed && parsed.price > 0) return parsed;
+          }
+        } catch { continue; }
+      }
+    }
+    return null;
+  }
+};
+
+// ==========================================
+// 4. SERVICIO OPEN FOOD FACTS (fotos + marca)
+// ==========================================
+const OpenFoodFactsService = {
+  // Devuelve { brand, imageUrl } — tiene CORS abierto, funciona siempre desde browser
+  searchProduct: async (query) => {
+    const result = { brand: null, imageUrl: null };
+    try {
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=5&fields=brands,image_front_url,image_url,product_name&lc=es&cc=es`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
+      const data = await res.json();
+      // Buscamos el primer producto con imagen válida
+      const products = data.products || [];
+      for (const p of products) {
+        const imgUrl = p.image_front_url || p.image_url || null;
+        if (imgUrl && imgUrl.startsWith('http')) {
+          if (p.brands && !result.brand) result.brand = p.brands.split(',')[0].trim();
+          result.imageUrl = imgUrl;
+          break;
+        }
+      }
+      // Marca aunque no haya imagen
+      if (!result.brand && products[0]?.brands) {
+        result.brand = products[0].brands.split(',')[0].trim();
+      }
+    } catch {}
+    if (!result.brand) result.brand = '1ª Marca';
+    return result;
+  }
+};
+
+// ==========================================
+// 5. SERVICIOS IA (Gemini)
 // ==========================================
 const ApiService = {
-  fetchRealProductData: async (query) => {
-    let result = { brand: null };
-    try {
-      const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=3`);
-      const data = await res.json();
-      if (data.products?.[0]?.brands) result.brand = data.products[0].brands.split(',')[0].trim();
-    } catch {}
-    if (!result.brand) result.brand = "1ª Marca";
-    return result;
-  },
   analyzeImageWithAI: async (base64String, mimeType, apiKey) => {
     if (!apiKey) throw new Error("API Key requerida");
     const payload = {
@@ -180,15 +256,14 @@ const ApiService = {
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
     );
     const data = await res.json();
-    console.log("Gemini response:", JSON.stringify(data));
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (text) return text;
     throw new Error(data.error?.message || "Sin respuesta de Gemini");
   }
-}; 
+};
 
 // ==========================================
-// 4. UTILIDADES
+// 6. UTILIDADES
 // ==========================================
 const Utils = {
   getStoreLocation: (storeId, cp) => {
@@ -210,24 +285,27 @@ const Utils = {
   calculateGeoSeed: (cp) => { let h = 0; for (let i = 0; i < cp.length; i++) { h = cp.charCodeAt(i) + ((h << 5) - h); } return Math.abs(h); },
   splitFormat: (f) => { const p = f.split(' '); return p.length > 1 ? { type: p[0], amount: p.slice(1).join(' ') } : { type: 'Formato', amount: f }; },
   isBeverageItem: (name) => {
-    const kw = ['cola','pepsi','coca','fanta','sprite','agua','zumo','jugo','cerveza','vino','refresco','bebida','leche','batido','té','cafe','café','energy','monster','aquarius','nestea','lipton','mahou','estrella','heineken','shandy','tonica','tónica','soda','zero','light','max','aceite'];
-    return kw.some(k => name.toLowerCase().includes(k));
+    const solid = ['cola cao','nesquik','cacao','harina','azucar','azúcar','café molido','cafe molido','aceite'];
+    const lowerName = name.toLowerCase();
+    if (solid.some(s => lowerName.includes(s))) return false;
+    const liquid = ['cola','pepsi','coca','fanta','sprite','agua','zumo','jugo','cerveza','vino','refresco','bebida','leche','batido','té ','cafe ','café ','energy','monster','aquarius','nestea','lipton','mahou','estrella','heineken','shandy','tonica','tónica','soda'];
+    return liquid.some(k => lowerName.includes(k));
   }
 };
 
 // ==========================================
-// 5. COMPONENTES VISUALES
+// 7. COMPONENTES VISUALES
 // ==========================================
 const StoreLogo = memo(({ store, className = "" }) => {
   const logos = {
     mercadona: <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#008e59"/><text x="50" y="65" fill="white" fontSize="50" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">M</text></svg>,
-    carrefour: <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="white"/><path d="M50,15 L85,50 L50,85 Z" fill="#e3001b"/><path d="M50,15 L15,50 L50,85 Z" fill="#00387b"/><text x="50" y="68" fill="white" fontSize="60" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">C</text></svg>,
-    lidl: <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#0050aa"/><circle cx="50" cy="50" r="35" fill="#fff000" stroke="#e3001b" strokeWidth="6"/><text x="50" y="65" fill="#0050aa" fontSize="40" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">L</text></svg>,
-    dia: <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#d50000"/><text x="50" y="62" fill="white" fontSize="40" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">DIA</text></svg>,
-    aldi: <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#00008a"/><text x="50" y="68" fill="#00a0e4" fontSize="55" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">A</text></svg>,
-    bm: <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#ff6b00"/><text x="50" y="62" fill="white" fontSize="40" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">BM</text></svg>,
-    eroski: <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#004b87"/><text x="50" y="60" fill="white" fontSize="24" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">EROSKI</text></svg>,
-    alcampo: <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#e3001b"/><text x="50" y="68" fill="white" fontSize="55" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">A</text></svg>
+    carrefour:  <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="white"/><path d="M50,15 L85,50 L50,85 Z" fill="#e3001b"/><path d="M50,15 L15,50 L50,85 Z" fill="#00387b"/><text x="50" y="68" fill="white" fontSize="60" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">C</text></svg>,
+    lidl:       <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#0050aa"/><circle cx="50" cy="50" r="35" fill="#fff000" stroke="#e3001b" strokeWidth="6"/><text x="50" y="65" fill="#0050aa" fontSize="40" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">L</text></svg>,
+    dia:        <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#d50000"/><text x="50" y="62" fill="white" fontSize="40" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">DIA</text></svg>,
+    aldi:       <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#00008a"/><text x="50" y="68" fill="#00a0e4" fontSize="55" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">A</text></svg>,
+    bm:         <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#ff6b00"/><text x="50" y="62" fill="white" fontSize="40" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">BM</text></svg>,
+    eroski:     <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#004b87"/><text x="50" y="60" fill="white" fontSize="24" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">EROSKI</text></svg>,
+    alcampo:    <svg viewBox="0 0 100 100" className={className}><rect width="100" height="100" rx="20" fill="#e3001b"/><text x="50" y="68" fill="white" fontSize="55" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">A</text></svg>
   };
   return logos[store.id] || <div className={`flex items-center justify-center font-black text-white rounded-xl text-[10px] ${className}`} style={{ background: store.accent }}>{store.nombre.substring(0,2).toUpperCase()}</div>;
 });
@@ -247,18 +325,58 @@ const RankPill = ({ rank }) => {
   return <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${styles[rank]||'bg-slate-100 text-slate-500'}`}>{rank+1}</span>;
 };
 
+// Imagen de producto con estados carga/error
+const ProductImage = memo(({ photoUrl, name, size = 'md' }) => {
+  const [state, setState] = useState('loading'); // loading | ok | error
+
+  if (!photoUrl) return null;
+
+  const dims = size === 'lg'
+    ? 'w-20 h-20'
+    : size === 'sm'
+      ? 'w-8 h-8'
+      : 'w-16 h-16';
+
+  return (
+    <div className={`${dims} rounded-2xl flex-shrink-0 overflow-hidden flex items-center justify-center border border-white/20 bg-white/10`}>
+      {state === 'error' ? (
+        <ImageOff size={size === 'sm' ? 12 : 20} className="text-white/30"/>
+      ) : (
+        <>
+          {state === 'loading' && (
+            <div className={`${dims} animate-pulse rounded-2xl bg-white/10`}/>
+          )}
+          <img
+            src={photoUrl}
+            alt={name}
+            className={`w-full h-full object-contain p-1.5 transition-opacity duration-300 ${state === 'ok' ? 'opacity-100' : 'opacity-0 absolute'}`}
+            onLoad={() => setState('ok')}
+            onError={() => setState('error')}
+            crossOrigin="anonymous"
+          />
+        </>
+      )}
+    </div>
+  );
+});
+
 const ProductCard = memo(({ item, index, onAddToBasket }) => {
   const topOption = item.rankedOptions[0];
   const maxUnitPrice = Math.max(...item.rankedOptions.map(o => o.unitPrice));
   const minUnitPrice = topOption.unitPrice;
   const savings = maxUnitPrice - minUnitPrice;
+  const photoUrl = item.photoUrl || null;
+
   return (
     <div className="bg-white rounded-3xl overflow-hidden mb-3 border border-slate-100" style={{ animation: `fadeSlideIn 0.4s ease ${index*0.08}s both` }}>
+      {/* Cabecera coloreada con foto */}
       <div className="relative overflow-hidden" style={{ background: topOption.accent||'#1a1a2e' }}>
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage:'repeating-linear-gradient(45deg,rgba(255,255,255,.1) 0,rgba(255,255,255,.1) 1px,transparent 0,transparent 50%)', backgroundSize:'8px 8px' }}/>
         <div className="relative p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0 pr-3">
+          <div className="flex items-start space-x-3">
+            {/* Foto real del producto */}
+            {photoUrl && <ProductImage photoUrl={photoUrl} name={item.itemName} size="md"/>}
+            <div className="flex-1 min-w-0">
               <h3 className="font-black text-white text-lg leading-tight capitalize">{item.itemName}</h3>
               <p className="text-white/70 text-xs font-medium mt-0.5 truncate">{topOption.specificBrand}</p>
             </div>
@@ -279,6 +397,8 @@ const ProductCard = memo(({ item, index, onAddToBasket }) => {
           </div>
         </div>
       </div>
+
+      {/* Comparativa de tiendas */}
       <div className="p-4">
         <div className="space-y-2 mb-3">
           {item.rankedOptions.map((opt, idx) => {
@@ -317,7 +437,7 @@ const ProductCard = memo(({ item, index, onAddToBasket }) => {
 });
 
 // ==========================================
-// 6. APP PRINCIPAL
+// 8. APP PRINCIPAL
 // ==========================================
 export default function App() {
   const [view, setView] = useState('home');
@@ -328,6 +448,9 @@ export default function App() {
   const [imageError, setImageError] = useState('');
   const apiKey = "AIzaSyBO0KR9duDYFti1xJzHazohVVW_KVigveo";
   const fileInputRef = useRef(null);
+  // Caché para no repetir llamadas API en la misma sesión
+  const photoCache = useRef({});
+  const mercadonaCache = useRef({});
 
   const [predefinedItems, setPredefinedItems] = useState([
     { name:'Leche entera',checked:false },{ name:'Cola Cao',checked:false },{ name:'Pepsi Max Lima',checked:false },
@@ -400,6 +523,30 @@ export default function App() {
     if(fileInputRef.current) fileInputRef.current.value=null;
   };
 
+  // Obtiene foto del producto: primero Mercadona, luego Open Food Facts
+  const fetchProductPhoto = async (query, offQuery) => {
+    const cacheKey = query.toLowerCase();
+    if (photoCache.current[cacheKey] !== undefined) return photoCache.current[cacheKey];
+
+    // 1. Intenta Mercadona (para su foto de alta calidad)
+    let mercadonaData = mercadonaCache.current[cacheKey];
+    if (mercadonaData === undefined) {
+      mercadonaData = await MercadonaService.searchProduct(offQuery || query);
+      mercadonaCache.current[cacheKey] = mercadonaData || false;
+    }
+    if (mercadonaData && mercadonaData.photoUrl) {
+      photoCache.current[cacheKey] = mercadonaData.photoUrl;
+      return mercadonaData.photoUrl;
+    }
+
+    // 2. Fallback: Open Food Facts (CORS abierto, muy fiable)
+    setScanStatus(prev=>({...prev, currentStoreScraping:'Buscando foto...'}));
+    const offData = await OpenFoodFactsService.searchProduct(offQuery || query);
+    const url = offData.imageUrl || null;
+    photoCache.current[cacheKey] = url;
+    return url;
+  };
+
   const startScanning = async () => {
     if(itemsToScan.length===0) return;
     setView('scanning'); setResultsTab('comparativa'); setScanProgress(0);
@@ -420,35 +567,86 @@ export default function App() {
       const item = itemsToScan[i];
       const lowerItem = item.toLowerCase();
       let options=[],details={};
+      let productPhotoUrl = null;
 
       if(REAL_PRICES_DB[lowerItem]){
         const rd = REAL_PRICES_DB[lowerItem];
         details={ cat:rd.cat, isBeverage:rd.isBeverage, strictBrand:rd.strictBrand, unit:rd.unit };
+
+        // Busca foto (Mercadona primero → Open Food Facts fallback)
+        setScanStatus(prev=>({...prev, currentStoreScraping:'Buscando foto del producto...'}));
+        productPhotoUrl = await fetchProductPhoto(lowerItem, rd.offQuery);
+
+        // Precio de Mercadona API (si disponible, actualiza el precio de la BD)
+        const mercadonaData = mercadonaCache.current[lowerItem];
+        const hasMercadonaPrice = mercadonaData && mercadonaData.price > 0;
+
         for(const opt of rd.options){
           const storeDef = SUPERMERCADOS.find(s=>s.id===opt.storeId)||SUPERMERCADOS[0];
           setScanStatus(prev=>({...prev,currentStoreScraping:storeDef.nombre}));
-          await new Promise(r=>setTimeout(r,200));
-          const lp = opt.price*regMod;
-          options.push({...storeDef, specificBrand:opt.brand, isBrand:opt.isBrand, format:opt.format, price:lp, unitPrice:lp/opt.qty, calculationUnit:rd.unit, containerType:''});
+          await new Promise(r=>setTimeout(r,120));
+
+          let finalPrice = opt.price * regMod;
+
+          // Si es Mercadona y tenemos precio real de la API, usarlo
+          if (opt.storeId === 'mercadona' && hasMercadonaPrice) {
+            const ratio = mercadonaData.price / opt.price;
+            if (ratio > 0.3 && ratio < 3) finalPrice = mercadonaData.price;
+          }
+
+          options.push({
+            ...storeDef,
+            specificBrand: opt.brand,
+            isBrand: opt.isBrand,
+            format: opt.format,
+            price: finalPrice,
+            unitPrice: finalPrice / opt.qty,
+            calculationUnit: rd.unit,
+            containerType: '',
+          });
         }
       } else {
+        // Producto personalizado: precios estimados + foto de Open Food Facts
         const isBev = Utils.isBeverageItem(item);
         const unit = isBev?'L':'kg';
         details={ cat:'genérico', isBeverage:isBev, strictBrand:true, unit };
-        setScanStatus(prev=>({...prev,currentStoreScraping:'Buscando formatos...'}));
-        const apiData = await ApiService.fetchRealProductData(item);
-        const basePPU = 1.5+Math.random()*6.0;
+
+        setScanStatus(prev=>({...prev, currentStoreScraping:'Buscando foto del producto...'}));
+        // Para personalizados buscamos directamente en OFF (CORS seguro)
+        const offData = await OpenFoodFactsService.searchProduct(item);
+        productPhotoUrl = offData.imageUrl || null;
+        const brandName = offData.brand || '1ª Marca';
+
+        // También intentamos Mercadona para precio base
+        let mercadonaData = mercadonaCache.current[lowerItem];
+        if (mercadonaData === undefined) {
+          mercadonaData = await MercadonaService.searchProduct(item);
+          mercadonaCache.current[lowerItem] = mercadonaData || false;
+          if (mercadonaData?.photoUrl && !productPhotoUrl) productPhotoUrl = mercadonaData.photoUrl;
+        }
+
+        const basePPU = (mercadonaData && mercadonaData.price > 0) ? mercadonaData.price : (1.5+Math.random()*6.0);
         const formats = isBev
           ?[{qty:0.33,label:'Lata 33cl'},{qty:0.5,label:'Botella 500ml'},{qty:1.0,label:'Botella 1L'},{qty:1.5,label:'Botella 1.5L'},{qty:2.0,label:'Botella 2L'}]
           :[{qty:0.25,label:'Formato 250g'},{qty:0.5,label:'Formato 500g'},{qty:1.0,label:'Familiar 1Kg'}];
+
         for(const store of localStores){
           setScanStatus(prev=>({...prev,currentStoreScraping:store.nombre}));
-          await new Promise(r=>setTimeout(r,300));
+          await new Promise(r=>setTimeout(r,180));
           for(const fmt of formats){
             const sm=1+(Math.random()*0.3-0.15);
             const sd=fmt.qty>=1.5?0.80:fmt.qty>=1?0.88:fmt.qty<=0.33?1.25:1.0;
             const fp=basePPU*fmt.qty*sm*sd*regMod;
-            options.push({...store, specificBrand:apiData.brand, isBrand:true, format:fmt.label, price:fp, unitPrice:fp/fmt.qty, calculationUnit:unit, containerType:''});
+            options.push({
+              ...store,
+              specificBrand: brandName,
+              isBrand: true,
+              format: fmt.label,
+              price: fp,
+              unitPrice: fp/fmt.qty,
+              calculationUnit: unit,
+              containerType: '',
+            });
           }
         }
       }
@@ -464,7 +662,7 @@ export default function App() {
       }
       newAlerts[lowerItem] = bestPrice;
 
-      finalResults.push({ itemName:item, details, rankedOptions:unique });
+      finalResults.push({ itemName:item, details, rankedOptions:unique, photoUrl:productPhotoUrl });
     }
 
     setPriceAlerts(newAlerts);
@@ -828,6 +1026,7 @@ export default function App() {
     if(!results) return null;
     const storesUsed = Object.values(groupedByStore).filter(g=>g.items.length>0);
     const savings = totalExpensive-totalOptimized;
+    const withPhotos = results.items.filter(i=>i.photoUrl).length;
     return (
       <div className="flex flex-col h-full relative" style={{ background:'#f7f8fc', fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
         <style>{STYLES}</style>
@@ -858,19 +1057,17 @@ export default function App() {
             </div>
           </div>
           <div className="grid grid-cols-4 gap-2">
-            {[['Total mín.',totalOptimized.toFixed(2)+'€','bg-slate-50 border-slate-100 text-slate-400 text-slate-800'],
-              ['Productos',results.items.length,'bg-emerald-50 border-emerald-100 text-emerald-500 text-emerald-700'],
-              ['Tiendas',storesUsed.length,'bg-slate-50 border-slate-100 text-slate-400 text-slate-800'],
-              ['Ahorro',savings.toFixed(2)+'€','bg-amber-50 border-amber-100 text-amber-600 text-amber-700']
-            ].map(([label,val,cls],i)=>{
-              const [bg,,labelCls,valCls] = cls.split(' ');
-              return (
-                <div key={i} className={`${bg} rounded-2xl p-2.5 border ${cls.split(' ')[1]} text-center`}>
-                  <p className={`text-[8px] font-black uppercase tracking-wider mb-0.5 ${cls.split(' ')[2]}`}>{label}</p>
-                  <p className={`text-sm font-black ${cls.split(' ')[3]}`}>{val}</p>
-                </div>
-              );
-            })}
+            {[
+              ['Total mín.', totalOptimized.toFixed(2)+'€', 'bg-slate-50',   'border-slate-100',  'text-slate-400',  'text-slate-800'],
+              ['Productos',  results.items.length,           'bg-emerald-50', 'border-emerald-100','text-emerald-500','text-emerald-700'],
+              ['Tiendas',    storesUsed.length,              'bg-slate-50',   'border-slate-100',  'text-slate-400',  'text-slate-800'],
+              ['Ahorro',     savings.toFixed(2)+'€',         'bg-amber-50',   'border-amber-100',  'text-amber-600',  'text-amber-700'],
+            ].map(([label,val,bg,border,lc,vc],i)=>(
+              <div key={i} className={`${bg} rounded-2xl p-2.5 border ${border} text-center`}>
+                <p className={`text-[8px] font-black uppercase tracking-wider mb-0.5 ${lc}`}>{label}</p>
+                <p className={`text-sm font-black ${vc}`}>{val}</p>
+              </div>
+            ))}
           </div>
         </header>
 
@@ -905,7 +1102,10 @@ export default function App() {
                         <div key={i} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition-colors">
                           <div className="flex items-center space-x-3 flex-1 min-w-0 pr-3">
                             <FormatBadge format={item.format} className="w-12 h-10 flex-shrink-0"/>
-                            <div className="truncate"><p className="text-sm font-bold text-slate-800 truncate">{item.originalName}</p><p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">{item.specificBrand}</p></div>
+                            <div className="truncate">
+                              <p className="text-sm font-bold text-slate-800 truncate">{item.originalName}</p>
+                              <p className="text-[10px] font-medium text-slate-500 truncate mt-0.5">{item.specificBrand}</p>
+                            </div>
                           </div>
                           <span className="font-black text-sm text-slate-800 whitespace-nowrap px-3 py-1.5 rounded-xl bg-slate-100">{item.price.toFixed(2)}€</span>
                         </div>
@@ -932,8 +1132,16 @@ export default function App() {
                 return (
                   <div key={idx} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="font-black text-sm text-slate-800 capitalize">{item.itemName}</p>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        {item.photoUrl && (
+                          <img src={item.photoUrl} alt={item.itemName}
+                            className="w-9 h-9 object-contain rounded-xl bg-slate-50 p-0.5 flex-shrink-0 border border-slate-100"
+                            crossOrigin="anonymous"
+                            onError={e=>{ e.target.style.display='none'; }}/>
+                        )}
+                        <p className="font-black text-sm text-slate-800 capitalize truncate">{item.itemName}</p>
+                      </div>
+                      <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                         <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">-{pct}%</span>
                         <span className="font-black text-sm text-emerald-700">{saved.toFixed(2)}€</span>
                       </div>
