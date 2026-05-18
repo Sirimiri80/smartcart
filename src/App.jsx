@@ -21,8 +21,6 @@ const SUPERMERCADOS = [
   { id: 'alcampo', nombre: 'Alcampo', color: 'bg-rose-100 text-rose-800', border: 'border-rose-300', headerBg: 'bg-[#e3001b]', headerText: 'text-white', accent: '#e3001b' }
 ];
 
-// Fotos estáticas cacheadas para productos conocidos (Open Food Facts stable URLs)
-// Se usan como primer intento antes de buscar en la API
 const STATIC_PHOTOS = {
   'leche entera':      'https://images.openfoodfacts.org/images/products/841/500/600/1011/front_es.3.400.jpg',
   'cola cao':          'https://images.openfoodfacts.org/images/products/841/010/009/0888/front_es.26.400.jpg',
@@ -168,20 +166,15 @@ const Storage = {
 };
 
 // ==========================================
-// 3. SERVICIO OPEN FOOD FACTS — sólo para fotos, CORS abierto
-//    Timeout corto, sin proxy, sin reintentos múltiples
+// 3. SERVICIO OPEN FOOD FACTS
 // ==========================================
 const fetchPhotoOFF = async (query, cacheRef) => {
   const key = query.toLowerCase().trim();
-  // 1. Foto estática hardcodeada (instantáneo)
   if (STATIC_PHOTOS[key] !== undefined) {
     cacheRef.current[key] = STATIC_PHOTOS[key];
     return STATIC_PHOTOS[key];
   }
-  // 2. Caché en memoria
   if (cacheRef.current[key] !== undefined) return cacheRef.current[key];
-
-  // 3. Consulta OFF con timeout de 4s
   try {
     const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=3&fields=image_front_url&lc=es&cc=es`;
     const controller = new AbortController();
@@ -199,7 +192,7 @@ const fetchPhotoOFF = async (query, cacheRef) => {
 };
 
 // ==========================================
-// 4. SERVICIO GEMINI (análisis imagen cámara)
+// 4. SERVICIO GEMINI
 // ==========================================
 const ApiService = {
   analyzeImageWithAI: async (base64String, mimeType, apiKey) => {
@@ -244,7 +237,6 @@ const Utils = {
     let hashDist = 0; const strDist = storeId + cp; for (let i = 0; i < strDist.length; i++) { hashDist = strDist.charCodeAt(i) + ((hashDist << 5) - hashDist); }
     return { address: exactAddress, distance: (((Math.abs(hashDist) % 28) + 2) / 10).toFixed(1) };
   },
-  // Hash determinista para evitar Math.random() (resultados inconsistentes entre renders)
   hashNum: (str) => { let h = 0; for (let i = 0; i < str.length; i++) { h = str.charCodeAt(i) + ((h << 5) - h); } return Math.abs(h); },
   calculateGeoSeed: (cp) => { let h = 0; for (let i = 0; i < cp.length; i++) { h = cp.charCodeAt(i) + ((h << 5) - h); } return Math.abs(h); },
   splitFormat: (f) => { const p = f.split(' '); return p.length > 1 ? { type: p[0], amount: p.slice(1).join(' ') } : { type: 'Formato', amount: f }; },
@@ -396,7 +388,6 @@ export default function App() {
   const [imageError, setImageError] = useState('');
   const apiKey = "AIzaSyBO0KR9duDYFti1xJzHazohVVW_KVigveo";
   const fileInputRef = useRef(null);
-  // Caché foto (persiste toda la sesión)
   const photoCache = useRef({});
 
   const [predefinedItems, setPredefinedItems] = useState([
@@ -468,17 +459,11 @@ export default function App() {
     if(fileInputRef.current) fileInputRef.current.value=null;
   };
 
-  // ==========================================
-  // SCANNING — NUEVA VERSIÓN RÁPIDA
-  // Precios: 100% síncrono desde BD local (cero peticiones de red)
-  // Fotos: Promise.allSettled en paralelo (una petición por producto)
-  // ==========================================
   const startScanning = async () => {
     if(itemsToScan.length===0) return;
     setView('scanning'); setResultsTab('comparativa'); setScanProgress(0);
     setScanStatus({ phase:'locating', stores:[], currentStoreScraping:'', itemIndex:0, doneCount:0 });
 
-    // Paso 1 — animación geolocalización (reducida a 800ms)
     await new Promise(r=>setTimeout(r,800));
 
     const geoSeed = Utils.calculateGeoSeed(userAddress);
@@ -490,7 +475,6 @@ export default function App() {
     setScanStatus(prev=>({ ...prev, phase:'scraping' }));
     setScanProgress(15);
 
-    // Paso 2 — Calcular todos los precios de forma SÍNCRONA (BD local, sin red)
     const priceData = itemsToScan.map((item) => {
       const lowerItem = item.toLowerCase();
       let options = [], details = {}, offQuery = item;
@@ -515,7 +499,6 @@ export default function App() {
           });
         }
       } else {
-        // Producto personalizado: precios estimados deterministas (sin Math.random)
         const isBev = Utils.isBeverageItem(item);
         const unit = isBev ? 'L' : 'kg';
         details = { cat:'genérico', isBeverage:isBev, strictBrand:true, unit };
@@ -544,7 +527,6 @@ export default function App() {
         }
       }
 
-      // Ordenar y deduplicar
       options.sort((a,b) => a.unitPrice - b.unitPrice);
       const unique = []; const seen = new Set();
       for (const opt of options) {
@@ -559,12 +541,10 @@ export default function App() {
     setScanProgress(40);
     setScanStatus(prev => ({ ...prev, currentStoreScraping: 'Descargando fotos en paralelo...' }));
 
-    // Paso 3 — Buscar TODAS las fotos en PARALELO (una petición OFF por producto)
     let doneCount = 0;
     const photoPromises = priceData.map(async (pd, i) => {
       const url = await fetchPhotoOFF(pd.offQuery || pd.itemName, photoCache);
       doneCount++;
-      // Actualizar progreso conforme llegan las fotos
       const pct = 40 + Math.round((doneCount / priceData.length) * 50);
       setScanProgress(pct);
       setScanStatus(prev => ({ ...prev, doneCount, currentStoreScraping: `${doneCount}/${priceData.length} fotos` }));
@@ -573,14 +553,12 @@ export default function App() {
 
     const photoResults = await Promise.allSettled(photoPromises);
 
-    // Fusionar fotos con los resultados de precios
     photoResults.forEach(result => {
       if (result.status === 'fulfilled' && result.value.url) {
         priceData[result.value.index].photoUrl = result.value.url;
       }
     });
 
-    // Paso 4 — Alertas de precio
     const newAlerts = { ...priceAlerts };
     const notifications = [];
     priceData.forEach(item => {
@@ -683,6 +661,11 @@ export default function App() {
                         {item.checked&&<CheckCircle2 size={13} className="text-emerald-500" strokeWidth={3}/>}
                       </div>
                       <span className={`font-black text-sm ${item.checked?'text-white':'text-slate-800'}`}>{item.name}</span>
+                    </button>
+                    {/* ── NUEVO: botón borrar producto predefinido ── */}
+                    <button onClick={()=>setPredefinedItems(prev=>prev.filter((_,i)=>i!==idx))}
+                      className="p-3 rounded-2xl border bg-white border-slate-200 text-slate-300 hover:text-red-400 transition-all active:scale-95">
+                      <Trash2 size={16}/>
                     </button>
                     <button onClick={()=>toggleFavorite(item.name)}
                       className={`p-3 rounded-2xl border transition-all ${favorites.includes(item.name)?'bg-rose-50 border-rose-200 text-rose-500':'bg-white border-slate-200 text-slate-300'}`}>
@@ -921,18 +904,15 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Productos con estado paralelo */}
               <div className="flex-1 overflow-y-auto">
                 {scanStatus.phase==='scraping' ? (
                   <div className="space-y-3">
-                    {/* Barra de precios (calculados instantáneamente) */}
                     <div className="p-3.5 rounded-2xl border glow-box" style={{ background:'rgba(16,185,129,.06)', borderColor:'rgba(16,185,129,.35)' }}>
                       <div className="flex items-center space-x-2.5">
                         <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0"/>
                         <p className="text-emerald-300 font-black text-sm">{total} productos — precios calculados</p>
                       </div>
                     </div>
-                    {/* Fotos en paralelo */}
                     <div className="p-3.5 rounded-2xl border" style={{ background:'rgba(255,255,255,.02)', borderColor:'rgba(255,255,255,.08)' }}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
@@ -946,7 +926,6 @@ export default function App() {
                       </div>
                       <p className="text-slate-500 text-[10px] mt-1.5">Descargando en paralelo · Open Food Facts</p>
                     </div>
-                    {/* Grid de supermercados */}
                     <div className="grid grid-cols-4 gap-2 mt-2">
                       {SUPERMERCADOS.map((store,i)=>(
                         <div key={i} className="flex flex-col items-center p-2 rounded-xl border" style={{ background:'rgba(255,255,255,.03)', borderColor:'rgba(255,255,255,.06)' }}>
