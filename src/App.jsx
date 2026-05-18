@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
 import {
   MapPin, Plus, Trash2, ChevronLeft, Settings,
   Store, CheckCircle2, Receipt, Info,
-  Loader2, Globe, Sparkles, Target, List, Camera,
+  Loader2, Globe, Target, List, Camera,
   Scale, Package, ArrowRight, Zap, Star, Clock,
-  ShoppingBasket, TrendingDown, Bell, Heart, X, ImageOff
+  ShoppingBasket, TrendingDown, Bell, Heart, X, ImageOff,
+  ShoppingCart // Añadido el carrito de la compra
 } from 'lucide-react';
 
 // ==========================================
@@ -196,7 +197,6 @@ const fetchPhotoOFF = async (query, cacheRef) => {
 // ==========================================
 const ApiService = {
   analyzeImageWithAI: async (base64String, mimeType, apiKey) => {
-    if (!apiKey) throw new Error("API Key requerida");
     const payload = {
       contents: [{
         role: "user",
@@ -207,7 +207,7 @@ const ApiService = {
       }]
     };
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
     );
     const data = await res.json();
@@ -380,13 +380,16 @@ const ProductCard = memo(({ item, index, onAddToBasket }) => {
 // 7. APP PRINCIPAL
 // ==========================================
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashProgress, setSplashProgress] = useState(0);
+
   const [view, setView] = useState('home');
   const [homeTab, setHomeTab] = useState('lista');
   const [userAddress, setUserAddress] = useState(() => Storage.get('smartcart_address','Calle Urbieta 12, 20006'));
   const [resultsTab, setResultsTab] = useState('comparativa');
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [imageError, setImageError] = useState('');
-  const apiKey = "AIzaSyBO0KR9duDYFti1xJzHazohVVW_KVigveo";
+  const apiKey = "";
   const fileInputRef = useRef(null);
   const photoCache = useRef({});
 
@@ -409,6 +412,23 @@ export default function App() {
   const [scanStatus, setScanStatus] = useState({ phase:'idle', stores:[], currentStoreScraping:'', itemIndex:0, doneCount:0 });
   const [scanProgress, setScanProgress] = useState(0);
   const listEndRef = useRef(null);
+
+  // Efecto para la pantalla de carga (Splash Screen)
+  useEffect(() => {
+    if (!showSplash) return;
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.floor(Math.random() * 15) + 5; 
+      if (progress >= 100) {
+        setSplashProgress(100);
+        clearInterval(interval);
+        setTimeout(() => setShowSplash(false), 500); 
+      } else {
+        setSplashProgress(progress);
+      }
+    }, 150);
+    return () => clearInterval(interval);
+  }, [showSplash]);
 
   useEffect(()=>{ Storage.set('smartcart_items',customItems); },[customItems]);
   useEffect(()=>{ Storage.set('smartcart_favorites',favorites); },[favorites]);
@@ -598,6 +618,34 @@ export default function App() {
     .glow-box{animation:glow 2s ease-in-out infinite}
   `;
 
+  // Nueva PANTALLA DE CARGA (Splash Screen)
+  const renderSplash = () => (
+    <div className="flex flex-col h-full bg-slate-900 items-center justify-center relative overflow-hidden" style={{ fontFamily:"'DM Sans','Segoe UI',system-ui,sans-serif" }}>
+      <div className="absolute inset-0 opacity-10" style={{ backgroundImage:'linear-gradient(rgba(16,185,129,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(16,185,129,.5) 1px,transparent 1px)', backgroundSize:'32px 32px' }}/>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full opacity-20 blur-3xl" style={{ background:'#10b981' }}/>
+
+      <div className="relative z-10 flex flex-col items-center">
+        <div className="w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-emerald-500/40 mb-6" style={{ background:'linear-gradient(135deg,#10b981,#059669)' }}>
+          <ShoppingCart size={40} className="text-white" strokeWidth={2.5}/>
+        </div>
+        <h1 className="text-4xl font-black tracking-tight text-white mb-2">
+          Smart<span style={{ color:'#10b981' }}>Cart</span>
+        </h1>
+        <p className="text-slate-400 font-bold tracking-widest uppercase text-[10px]">Comparador Inteligente</p>
+      </div>
+
+      <div className="absolute bottom-16 left-12 right-12">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cargando datos</span>
+          <span className="text-[10px] font-black text-emerald-400">{splashProgress}%</span>
+        </div>
+        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${splashProgress}%`, background:'linear-gradient(90deg,#10b981,#34d399)' }}/>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderHome = () => {
     const allCount = itemsToScan.length;
     return (
@@ -607,7 +655,8 @@ export default function App() {
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center space-x-2.5">
               <div className="w-9 h-9 rounded-2xl flex items-center justify-center shadow-lg" style={{ background:'linear-gradient(135deg,#10b981,#059669)' }}>
-                <Sparkles size={17} className="text-white"/>
+                {/* CAMBIO VISUAL: Carrito de la compra en lugar de estrella */}
+                <ShoppingCart size={18} className="text-white" strokeWidth={2.5}/>
               </div>
               <div>
                 <h1 className="text-[22px] leading-none font-black tracking-tight" style={{ color:'#0f172a' }}>Smart<span style={{ color:'#10b981' }}>Cart</span></h1>
@@ -662,7 +711,6 @@ export default function App() {
                       </div>
                       <span className={`font-black text-sm ${item.checked?'text-white':'text-slate-800'}`}>{item.name}</span>
                     </button>
-                    {/* ── NUEVO: botón borrar producto predefinido ── */}
                     <button onClick={()=>setPredefinedItems(prev=>prev.filter((_,i)=>i!==idx))}
                       className="p-3 rounded-2xl border bg-white border-slate-200 text-slate-300 hover:text-red-400 transition-all active:scale-95">
                       <Trash2 size={16}/>
@@ -995,8 +1043,8 @@ export default function App() {
           <div className="grid grid-cols-4 gap-2">
             {[
               ['Total mín.', totalOptimized.toFixed(2)+'€', 'bg-slate-50',   'border-slate-100',  'text-slate-400',  'text-slate-800'],
-              ['Productos',  results.items.length,           'bg-emerald-50', 'border-emerald-100','text-emerald-500','text-emerald-700'],
-              ['Tiendas',    storesUsed.length,              'bg-slate-50',   'border-slate-100',  'text-slate-400',  'text-slate-800'],
+              ['Productos',  results.items.length,            'bg-emerald-50', 'border-emerald-100','text-emerald-500','text-emerald-700'],
+              ['Tiendas',    storesUsed.length,               'bg-slate-50',   'border-slate-100',  'text-slate-400',  'text-slate-800'],
               ['Ahorro',     savings.toFixed(2)+'€',         'bg-amber-50',   'border-amber-100',  'text-amber-600',  'text-amber-700'],
             ].map(([label,val,bg,border,lc,vc],i)=>(
               <div key={i} className={`${bg} rounded-2xl p-2.5 border ${border} text-center`}>
@@ -1118,10 +1166,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-200 flex items-center justify-center font-sans sm:p-6">
       <div className="w-full max-w-md h-[100dvh] sm:h-[850px] sm:max-h-[90vh] bg-white sm:rounded-[2.5rem] shadow-2xl overflow-hidden relative border-gray-800 sm:border-[8px]">
-        {view==='home'&&renderHome()}
-        {view==='settings'&&renderSettings()}
-        {view==='scanning'&&renderScanning()}
-        {view==='results'&&renderResults()}
+        {showSplash && renderSplash()}
+        {!showSplash && view === 'home' && renderHome()}
+        {!showSplash && view === 'settings' && renderSettings()}
+        {!showSplash && view === 'scanning' && renderScanning()}
+        {!showSplash && view === 'results' && renderResults()}
       </div>
     </div>
   );
