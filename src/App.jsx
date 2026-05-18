@@ -319,7 +319,7 @@ export default function App() {
   const [resultsTab, setResultsTab] = useState('comparativa');
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [imageError, setImageError] = useState('');
-  const apiKey = "";
+  const apiKey = "AIzaSyAwSOuiReCyLLHUuawNnyllUZDXr6XxUE4";
   const fileInputRef = useRef(null);
 
   const [predefinedItems, setPredefinedItems] = useState([
