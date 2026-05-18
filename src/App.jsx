@@ -170,13 +170,13 @@ const ApiService = {
     let delay = 1000;
     for (let i = 0; i < 3; i++) {
       try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await res.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text) return text;
       } catch { await new Promise(r => setTimeout(r, delay)); delay *= 2; }
     }
-    throw new Error("No se pudo analizar la imagen");
+    throw new Error("Error: " + JSON.stringify(data));
   }
 };
 
